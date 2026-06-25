@@ -1,0 +1,796 @@
+﻿nombre,temporada,posicion,edad,partidos,goles,asistencias,pases_precisos,rating,etiqueta
+Miguel Merentiel,2024,Centre-Forward,28,44,15,4,75.7,7.7,1
+Milton Giménez,2024,Centre-Forward,27,34,10,4,77.8,7.6,1
+Exequiel Zeballos,2024,Right Winger,22,35,6,4,65.9,7.2,1
+Frank Fabra,2024,Left-Back,33,4,0,2,83.5,7.1,0
+Edinson Cavani,2024,Centre-Forward,37,24,5,2,69.9,7.1,1
+Carlos Palacios,2024,Attacking Midfield,23,36,3,4,83.5,6.9,0
+Rodrigo Battaglia,2024,Defensive Midfield,32,35,5,0,86.2,6.9,0
+Ayrton Costa,2024,Centre-Back,24,26,3,1,84.3,6.8,0
+Leandro Paredes,2024,Defensive Midfield,30,18,1,4,88.9,6.8,0
+Kevin Zenón,2024,Left Winger,22,33,4,0,74.2,6.8,0
+Lautaro Di Lollo,2024,Centre-Back,20,31,3,0,83.7,6.7,0
+Lautaro Blanco,2024,Left-Back,25,37,1,3,82.5,6.7,0
+Brian Aguirre,2024,Left Winger,21,19,1,3,66.1,6.7,0
+Alan Velasco,2024,Left Winger,21,31,1,2,66.1,6.6,0
+Lucas Janson,2024,Left Winger,29,6,1,0,69.8,6.6,0
+Agustín Marchesín,2024,Goalkeeper,36,40,0,0,0.0,6.5,0
+Juan Barinaga,2024,Right-Back,23,22,0,2,81.3,6.5,0
+Luis Advíncula,2024,Right-Back,34,24,1,1,82.9,6.5,0
+Marcelo Saracchi,2024,Left-Back,26,11,1,0,85.5,6.4,0
+Marcos Rojo,2024,Centre-Back,34,13,1,0,78.6,6.4,0
+Milton Delgado,2024,Defensive Midfield,19,24,0,1,84.4,6.4,0
+Williams Alarcón,2024,Central Midfield,23,26,0,1,81.2,6.4,0
+Lucas Blondel,2024,Right-Back,27,12,0,1,85.9,6.3,0
+Tomás Belmonte,2024,Defensive Midfield,26,23,0,0,81.4,6.3,0
+Ander Herrera,2024,Central Midfield,34,17,0,0,81.0,6.2,0
+Leandro Brey,2024,Goalkeeper,21,6,0,0,0.0,6.1,0
+Marco Pellegrino,2024,Centre-Back,21,8,0,0,80.9,6.1,0
+Malcom Braida,2024,Left-Back,27,8,0,0,84.7,6.1,0
+Camilo Rey Domenech,2024,Defensive Midfield,18,7,0,0,80.8,6.1,0
+Mateo Mendía,2024,Centre-Back,20,3,0,0,85.9,6.0,0
+Nicolás Figal,2024,Centre-Back,30,3,0,0,78.9,6.0,0
+Ignacio Miramón,2024,Defensive Midfield,21,3,0,0,87.6,6.0,0
+Agustín Martegani,2024,Attacking Midfield,24,2,0,0,87.0,6.0,0
+Edinson Cavani,2023,Centre-Forward,36,39,20,1,66.2,8.1,1
+Miguel Merentiel,2023,Centre-Forward,27,49,17,7,76.6,7.8,1
+Kevin Zenón,2023,Left Winger,21,46,6,7,70.1,7.2,1
+Milton Giménez,2023,Centre-Forward,26,25,7,1,76.8,7.2,1
+Aarón Anselmino,2023,Centre-Back,18,18,2,3,78.7,6.9,0
+Lautaro Blanco,2023,Left-Back,24,46,0,9,86.4,6.9,0
+Marcelo Saracchi,2023,Left-Back,25,25,3,3,80.8,6.9,0
+Cristian Medina,2023,Central Midfield,21,30,3,3,89.9,6.9,0
+Luis Advíncula,2023,Right-Back,33,44,0,7,85.4,6.8,0
+Brian Aguirre,2023,Left Winger,20,18,3,1,65.1,6.8,0
+Lucas Blondel,2023,Right-Back,26,10,2,0,79.2,6.7,0
+Cristian Lema,2023,Centre-Back,33,34,1,2,79.8,6.7,0
+Equi Fernández,2023,Defensive Midfield,20,20,2,1,88.1,6.7,0
+Exequiel Zeballos,2023,Right Winger,21,25,2,2,75.7,6.7,0
+Jabes Saralegui,2023,Central Midfield,20,38,1,1,83.4,6.6,0
+Luca Langoni,2023,Right Winger,21,25,1,2,69.2,6.6,0
+Sergio Romero,2023,Goalkeeper,36,39,0,0,0.0,6.5,0
+Nicolás Valentini,2023,Centre-Back,22,9,1,0,78.2,6.5,0
+Nicolás Figal,2023,Centre-Back,29,33,1,0,84.3,6.5,0
+Marcos Rojo,2023,Centre-Back,33,30,1,0,86.0,6.5,0
+Pol FernándezPol Fernández,2023,Central Midfield,31,45,0,1,87.5,6.5,0
+Tomás Belmonte,2023,Defensive Midfield,25,20,1,0,87.8,6.4,0
+Norberto Briasco,2023,Right Winger,27,6,0,1,77.4,6.4,0
+Darío Benedetto,2023,Centre-Forward,33,13,1,0,77.4,6.4,0
+Leandro Brey,2023,Goalkeeper,20,21,0,0,0.0,6.3,0
+Lautaro Di Lollo,2023,Centre-Back,19,20,0,0,81.2,6.3,0
+Juan Barinaga,2023,Right-Back,22,10,0,1,86.1,6.3,0
+Frank Fabra,2023,Left-Back,32,16,0,1,80.8,6.3,0
+Lucas Janson,2023,Left Winger,28,22,0,0,69.2,6.3,0
+Jorman Campuzano,2023,Defensive Midfield,27,12,0,0,88.6,6.2,0
+Ignacio Miramón,2023,Defensive Midfield,20,17,0,0,84.3,6.2,0
+Mateo Mendía,2023,Centre-Back,19,4,0,0,85.0,6.1,0
+Ezequiel Bullaude,2023,Attacking Midfield,22,6,0,0,84.1,6.1,0
+Vicente Taborda,2023,Attacking Midfield,22,6,0,0,83.7,6.1,0
+Mauricio Benítez,2023,Defensive Midfield,19,11,0,0,89.3,6.1,0
+Julián Ceballos,2023,Central Midfield,18,5,0,0,87.5,6.1,0
+Agustín Martegani,2023,Attacking Midfield,23,11,0,0,81.0,6.1,0
+Juan Ramírez,2023,Central Midfield,30,4,0,0,89.0,6.1,0
+Gary Medel,2023,Defensive Midfield,35,11,0,0,85.1,6.1,0
+Javier García,2023,Goalkeeper,36,1,0,0,0.0,6.0,0
+Dylan Gorosito,2023,Right-Back,17,1,0,0,86.8,6.0,0
+Walter Molas,2023,Centre-Back,19,2,0,0,85.5,6.0,0
+Miguel Merentiel,2022,Centre-Forward,26,49,18,5,67.5,7.8,1
+Martín Payero,2022,Central Midfield,23,15,4,1,80.3,7.1,1
+Darío Benedetto,2022,Centre-Forward,32,41,6,4,73.9,7.1,1
+Luis Advíncula,2022,Right-Back,32,40,4,4,84.4,7.0,1
+Cristian Medina,2022,Central Midfield,20,49,5,4,86.4,7.0,1
+Óscar RomeroÓ. Romero,2022,Attacking Midfield,29,19,2,4,85.8,7.0,1
+Luis Vázquez,2022,Centre-Forward,21,20,3,3,65.9,7.0,1
+Marcelo Weigandt,2022,Right-Back,22,32,2,5,82.3,6.9,0
+Exequiel Zeballos,2022,Right Winger,20,21,2,4,70.0,6.9,0
+Nicolás Figal,2022,Centre-Back,28,46,4,0,84.2,6.8,0
+Valentín Barco,2022,Central Midfield,17,32,1,4,86.6,6.8,0
+Luca Langoni,2022,Right Winger,20,23,3,1,76.8,6.8,0
+Lucas Blondel,2022,Right-Back,25,10,2,0,82.0,6.7,0
+Pol FernándezPol Fernández,2022,Central Midfield,30,47,2,2,83.9,6.7,0
+Sebastián Villa,2022,Left Winger,26,24,1,3,77.5,6.7,0
+Nicolás Valentini,2022,Centre-Back,21,37,1,0,82.7,6.6,0
+Frank Fabra,2022,Left-Back,31,36,0,2,84.3,6.6,0
+Alan Varela,2022,Defensive Midfield,20,34,1,1,81.6,6.6,0
+Equi Fernández,2022,Defensive Midfield,19,43,0,2,80.7,6.6,0
+Norberto Briasco,2022,Right Winger,26,23,1,2,66.2,6.6,0
+Sergio Romero,2022,Goalkeeper,35,49,0,0,0.0,6.5,0
+Agustín Sández,2022,Left-Back,21,13,1,0,79.7,6.4,0
+Bruno Valdez,2022,Centre-Back,29,33,0,0,78.5,6.4,0
+Marcos Rojo,2022,Centre-Back,32,16,1,0,81.7,6.4,0
+Facundo Roncaglia,2022,Centre-Back,35,23,1,0,86.6,6.4,0
+Juan Ramírez,2022,Central Midfield,29,23,0,1,85.5,6.4,0
+Esteban Rolón,2022,Defensive Midfield,27,10,0,1,86.4,6.3,0
+Jorman Campuzano,2022,Defensive Midfield,26,17,0,0,89.4,6.2,0
+Javier García,2022,Goalkeeper,35,11,0,0,0.0,6.1,0
+Aarón Anselmino,2022,Centre-Back,17,5,0,0,82.9,6.1,0
+Jabes Saralegui,2022,Central Midfield,19,4,0,0,85.9,6.1,0
+Diego González,2022,Defensive Midfield,34,7,0,0,89.4,6.1,0
+Nicolás Orsini,2022,Centre-Forward,27,4,0,0,65.2,6.1,0
+Nahuel Genez,2022,Left-Back,19,1,0,0,83.0,6.0,0
+Brandon Cortés,2022,Attacking Midfield,21,1,0,0,84.6,6.0,0
+Gonzalo Morales,2022,Centre-Forward,19,2,0,0,66.3,6.0,0
+Sebastián Villa,2021,Left Winger,25,42,11,15,66.5,8.0,1
+Darío Benedetto,2021,Centre-Forward,31,42,19,3,66.3,8.0,1
+Luca Langoni,2021,Right Winger,19,22,7,1,65.6,7.3,1
+Óscar RomeroÓ. Romero,2021,Attacking Midfield,28,46,2,10,86.1,7.1,1
+Frank Fabra,2021,Left-Back,30,48,3,8,83.5,7.0,1
+Marcos Rojo,2021,Centre-Back,31,29,5,0,79.6,6.9,0
+Pol FernándezPol Fernández,2021,Central Midfield,29,51,4,3,84.2,6.9,0
+Exequiel Zeballos,2021,Right Winger,19,29,4,2,65.2,6.9,0
+Luis Vázquez,2021,Centre-Forward,20,48,5,2,65.5,6.9,0
+Eduardo Salvio,2021,Right Winger,30,19,4,0,76.1,6.9,0
+Norberto Briasco,2021,Right Winger,25,7,2,0,71.2,6.9,0
+Alan Varela,2021,Defensive Midfield,19,43,1,2,87.1,6.7,0
+Luis Advíncula,2021,Right-Back,31,44,1,0,79.7,6.6,0
+Cristian Medina,2021,Central Midfield,19,42,0,3,82.8,6.6,0
+Juan Ramírez,2021,Central Midfield,28,49,1,1,83.6,6.6,0
+Nicolás Orsini,2021,Centre-Forward,26,22,2,0,74.1,6.6,0
+Agustín Rossi,2021,Goalkeeper,25,46,0,0,0.0,6.5,0
+Agustín Sández,2021,Left-Back,20,17,1,1,78.3,6.5,0
+Carlos Zambrano,2021,Centre-Back,31,29,0,1,80.5,6.5,0
+Aarón Molinas,2021,Attacking Midfield,20,27,0,2,89.5,6.5,0
+Carlos Izquierdoz,2021,Centre-Back,32,19,1,0,86.4,6.4,0
+Nicolás Figal,2021,Centre-Back,27,27,0,1,85.0,6.4,0
+Jorman Campuzano,2021,Defensive Midfield,25,16,0,1,85.5,6.3,0
+Javier García,2021,Goalkeeper,34,13,0,0,0.0,6.2,0
+Marcelo Weigandt,2021,Right-Back,21,15,0,0,87.6,6.2,0
+Gabriel Aranda,2021,Centre-Back,20,13,0,0,82.1,6.2,0
+Esteban Rolón,2021,Defensive Midfield,26,12,0,0,82.5,6.2,0
+Gastón Ávila,2021,Centre-Back,19,7,0,0,82.4,6.1,0
+Diego González,2021,Defensive Midfield,33,7,0,0,87.6,6.1,0
+Leandro Brey,2021,Goalkeeper,18,1,0,0,0.0,6.0,0
+Eros Mancuso,2021,Right-Back,22,1,0,0,78.8,6.0,0
+Equi Fernández,2021,Defensive Midfield,18,1,0,0,86.6,6.0,0
+Agustín Almendra,2021,Central Midfield,21,2,0,0,87.4,6.0,0
+Edwin Cardona,2020,Attacking Midfield,27,21,3,8,80.5,7.5,1
+Sebastián Villa,2020,Left Winger,24,27,9,1,73.3,7.4,1
+Luis Vázquez,2020,Centre-Forward,19,26,7,2,74.4,7.3,1
+Carlos Tévez,2020,Centre-Forward,36,17,4,3,75.3,7.3,1
+Cristian Pavón,2020,Right-Back,24,32,4,5,83.8,7.1,1
+Eros Mancuso,2020,Right-Back,21,6,1,1,81.4,6.9,0
+Frank Fabra,2020,Left-Back,29,36,2,5,83.9,6.9,0
+Agustín Almendra,2020,Central Midfield,20,29,4,2,82.2,6.9,0
+Gonzalo Maroni,2020,Attacking Midfield,21,13,3,0,86.2,6.9,0
+Carlos Izquierdoz,2020,Centre-Back,31,41,3,1,78.4,6.8,0
+Diego González,2020,Defensive Midfield,32,17,2,1,85.3,6.7,0
+Eduardo Salvio,2020,Right Winger,29,9,1,1,77.7,6.7,0
+Mauro Zárate,2020,Centre-Forward,33,8,1,1,68.5,6.7,0
+Lisandro López,2020,Centre-Back,30,24,2,1,82.7,6.6,0
+Carlos Zambrano,2020,Centre-Back,30,15,2,0,80.9,6.6,0
+Cristian Medina,2020,Central Midfield,18,35,1,1,85.2,6.6,0
+Jorman Campuzano,2020,Defensive Midfield,24,28,1,2,80.9,6.6,0
+Exequiel Zeballos,2020,Right Winger,18,11,1,1,72.0,6.6,0
+Franco Soldano,2020,Centre-Forward,25,16,2,0,71.7,6.6,0
+Marcos Rojo,2020,Centre-Back,30,26,1,0,83.4,6.5,0
+Aarón Molinas,2020,Attacking Midfield,19,19,0,2,87.7,6.5,0
+Agustín Rossi,2020,Goalkeeper,24,32,0,0,0.0,6.4,0
+Alan Varela,2020,Defensive Midfield,18,27,0,0,83.6,6.4,0
+Agustín Obando,2020,Left Winger,20,11,1,0,69.2,6.4,0
+Nicolás Capaldo,2020,Centre-Back,21,17,0,1,86.0,6.3,0
+Agustín Sández,2020,Left-Back,19,13,0,1,81.8,6.3,0
+Julio Buffarini,2020,Right-Back,31,13,0,0,86.2,6.2,0
+Esteban Andrada,2020,Goalkeeper,29,11,0,0,0.0,6.1,0
+Emmanuel Más,2020,Left-Back,31,6,0,0,78.3,6.1,0
+Leonardo Jara,2020,Right-Back,29,8,0,0,78.4,6.1,0
+Javier García,2020,Goalkeeper,33,3,0,0,0.0,6.0,0
+Nicolás Valentini,2020,Centre-Back,19,1,0,0,86.9,6.0,0
+Renzo Giampaoli,2020,Centre-Back,20,2,0,0,78.9,6.0,0
+Equi Fernández,2020,Defensive Midfield,17,3,0,0,81.3,6.0,0
+Eduardo Salvio,2019,Right Winger,28,36,13,6,76.3,7.9,1
+Carlos Tévez,2019,Centre-Forward,35,34,14,3,73.4,7.9,1
+Ramón Ábila,2019,Centre-Forward,29,27,12,2,75.4,7.8,1
+Edwin Cardona,2019,Attacking Midfield,26,25,4,8,85.2,7.4,1
+Sebastián Villa,2019,Left Winger,23,39,5,7,68.8,7.2,1
+Mauro Zárate,2019,Centre-Forward,32,24,5,2,74.1,7.1,1
+Frank Fabra,2019,Left-Back,28,36,2,4,80.9,6.9,0
+Lisandro López,2019,Centre-Back,29,27,3,1,87.6,6.8,0
+Emanuel Reynoso,2019,Attacking Midfield,23,21,2,3,81.4,6.8,0
+Franco Soldano,2019,Centre-Forward,24,33,3,2,71.6,6.8,0
+Luis Vázquez,2019,Centre-Forward,18,5,1,0,75.5,6.7,0
+Nicolás Capaldo,2019,Centre-Back,20,38,0,2,87.1,6.6,0
+Carlos Izquierdoz,2019,Centre-Back,30,43,2,0,87.7,6.6,0
+Emmanuel Más,2019,Left-Back,30,23,1,2,81.9,6.6,0
+Julio Buffarini,2019,Right-Back,30,42,1,1,79.7,6.6,0
+Alexis Mac Allister,2019,Central Midfield,20,13,1,1,85.6,6.6,0
+Diego González,2019,Defensive Midfield,31,13,1,1,87.0,6.6,0
+Esteban Andrada,2019,Goalkeeper,28,39,0,0,0.0,6.5,0
+Júnior AlonsoJúnior Alonso,2019,Centre-Back,26,17,0,2,82.3,6.5,0
+Jorman Campuzano,2019,Defensive Midfield,23,35,1,0,89.9,6.5,0
+Pol FernándezPol Fernández,2019,Central Midfield,27,15,1,1,87.4,6.5,0
+Jan Hurtado,2019,Centre-Forward,19,14,1,1,76.9,6.5,0
+Agustín Obando,2019,Left Winger,19,27,1,1,71.5,6.5,0
+Alan Varela,2019,Defensive Midfield,17,7,0,1,89.4,6.4,0
+Agustín Almendra,2019,Central Midfield,19,10,1,0,81.0,6.4,0
+Gonzalo Maroni,2019,Attacking Midfield,20,11,1,0,86.2,6.4,0
+Leonardo Jara,2019,Right-Back,28,20,0,0,86.5,6.3,0
+Carlos Zambrano,2019,Centre-Back,29,18,0,0,86.5,6.2,0
+Iván Marcone,2019,Defensive Midfield,29,17,0,0,88.8,6.2,0
+Agustín Rossi,2019,Goalkeeper,23,11,0,0,0.0,6.1,0
+Gastón Ávila,2019,Centre-Back,17,5,0,0,81.7,6.1,0
+Marcelo Weigandt,2019,Right-Back,19,4,0,0,87.3,6.1,0
+Paolo Goltz,2019,Centre-Back,34,4,0,0,81.2,6.1,0
+Cristian Medina,2019,Central Midfield,17,4,0,0,87.0,6.1,0
+Daniele De Rossi,2019,Defensive Midfield,35,5,0,0,87.0,6.1,0
+Exequiel Zeballos,2019,Right Winger,17,6,0,0,69.7,6.1,0
+Javier García,2019,Goalkeeper,32,1,0,0,0.0,6.0,0
+Marcos Díaz,2019,Goalkeeper,33,3,0,0,0.0,6.0,0
+Agustín Sández,2019,Left-Back,18,2,0,0,78.2,6.0,0
+Aarón Molinas,2019,Attacking Midfield,18,1,0,0,85.7,6.0,0
+Walter Bou,2019,Centre-Forward,25,3,0,0,75.5,6.0,0
+Ramón Ábila,2018,Centre-Forward,28,32,11,6,67.3,7.8,1
+Mauro Zárate,2018,Centre-Forward,31,44,11,12,77.4,7.8,1
+Carlos Tévez,2018,Centre-Forward,34,38,6,6,77.2,7.3,1
+Cristian Pavón,2018,Right-Back,22,28,5,4,83.7,7.2,1
+Darío Benedetto,2018,Centre-Forward,28,26,5,2,65.3,7.1,1
+Sebastián Villa,2018,Left Winger,22,32,3,4,68.7,7.0,1
+Nahitan Nández,2018,Right Midfield,22,27,2,4,87.9,6.9,0
+Lisandro López,2018,Centre-Back,28,26,4,0,80.4,6.8,0
+Emmanuel Más,2018,Left-Back,29,38,3,2,81.9,6.8,0
+Emanuel Reynoso,2018,Attacking Midfield,22,29,3,2,84.9,6.8,0
+Agustín Obando,2018,Left Winger,18,6,0,2,73.4,6.7,0
+Carlos Izquierdoz,2018,Centre-Back,29,36,1,0,80.7,6.6,0
+Julio Buffarini,2018,Right-Back,29,31,1,2,84.3,6.6,0
+Agustín Almendra,2018,Central Midfield,18,23,1,2,85.0,6.6,0
+Esteban Andrada,2018,Goalkeeper,27,38,0,0,0.0,6.5,0
+Iván Marcone,2018,Defensive Midfield,28,29,0,0,87.2,6.4,0
+Paolo Goltz,2018,Centre-Back,33,11,0,1,86.9,6.3,0
+Jorman Campuzano,2018,Defensive Midfield,22,18,0,1,85.8,6.3,0
+Júnior AlonsoJúnior Alonso,2018,Centre-Back,25,16,0,0,81.7,6.2,0
+Marcelo Weigandt,2018,Right-Back,18,9,0,0,78.9,6.1,0
+Frank Fabra,2018,Left-Back,27,5,0,0,87.7,6.1,0
+Julián Chicco,2018,Defensive Midfield,20,5,0,0,82.0,6.1,0
+Marcos Díaz,2018,Goalkeeper,32,3,0,0,0.0,6.0,0
+Kevin Mac Allister,2018,Centre-Back,20,2,0,0,84.6,6.0,0
+Darío Benedetto,2017,Centre-Forward,27,17,14,6,69.2,9.4,1
+Ramón Ábila,2017,Centre-Forward,27,24,13,5,74.7,8.4,1
+Cristian Pavón,2017,Right-Back,21,43,9,18,86.9,8.0,1
+Pablo Pérez,2017,Central Midfield,31,36,8,6,82.2,7.5,1
+Carlos Tévez,2017,Centre-Forward,33,24,7,2,76.0,7.4,1
+Edwin Cardona,2017,Attacking Midfield,24,32,7,3,86.9,7.3,1
+Nahitan Nández,2017,Right Midfield,21,38,4,3,86.6,7.0,1
+Walter Bou,2017,Centre-Forward,23,19,4,1,68.1,7.0,1
+Frank Fabra,2017,Left-Back,26,27,3,3,84.4,6.9,0
+Emmanuel Más,2017,Left-Back,28,12,1,2,78.8,6.7,0
+Leonardo Jara,2017,Right-Back,26,38,1,3,79.6,6.7,0
+Wilmar Barrios,2017,Defensive Midfield,23,38,1,0,81.0,6.6,0
+Emanuel Reynoso,2017,Attacking Midfield,21,16,0,3,81.6,6.6,0
+Agustín Rossi,2017,Goalkeeper,21,39,0,0,0.0,6.5,0
+Lisandro Magallán,2017,Centre-Back,23,42,0,1,85.8,6.5,0
+Paolo Goltz,2017,Centre-Back,32,26,1,1,87.0,6.5,0
+Junior Benítez,2017,Left Winger,24,14,1,0,73.4,6.4,0
+Julio Buffarini,2017,Right-Back,28,21,0,0,84.1,6.3,0
+Cristian Espinoza,2017,Right Winger,22,14,0,1,74.3,6.3,0
+Santiago Vergini,2017,Centre-Back,28,13,0,0,78.1,6.2,0
+Fernando Gago,2017,Defensive Midfield,31,12,0,0,86.5,6.2,0
+Gonzalo Maroni,2017,Attacking Midfield,18,6,0,0,80.1,6.1,0
+Seba Pérez,2017,Defensive Midfield,24,7,0,0,85.5,6.1,0
+Guillermo Sara,2017,Goalkeeper,29,1,0,0,0.0,6.0,0
+Darío Benedetto,2016,Centre-Forward,26,28,24,3,74.4,9.2,1
+Cristian Pavón,2016,Right-Back,20,33,9,10,79.1,7.9,1
+Walter Bou,2016,Centre-Forward,22,28,6,1,69.4,7.1,1
+Nazareno Solís,2016,Left Winger,22,4,0,2,69.5,7.1,0
+Gino Peruzzi,2016,Right-Back,24,27,3,3,86.2,6.9,0
+Fernando Gago,2016,Defensive Midfield,30,19,2,3,89.0,6.9,0
+Junior Benítez,2016,Left Winger,23,10,2,1,76.7,6.9,0
+Frank Fabra,2016,Left-Back,25,22,2,3,86.8,6.8,0
+Pablo Pérez,2016,Central Midfield,30,31,1,4,86.3,6.8,0
+Rodrigo Bentancur,2016,Defensive Midfield,19,22,0,3,85.3,6.6,0
+Wilmar Barrios,2016,Defensive Midfield,22,22,0,3,82.4,6.6,0
+Juan Manuel Insaurralde,2016,Centre-Back,31,19,1,0,80.6,6.4,0
+Santiago Vergini,2016,Centre-Back,27,28,0,1,83.6,6.4,0
+Leonardo Jara,2016,Right-Back,25,17,0,1,84.6,6.3,0
+Agustín Rossi,2016,Goalkeeper,20,17,0,0,0.0,6.2,0
+Guillermo Sara,2016,Goalkeeper,28,14,0,0,0.0,6.2,0
+Seba Pérez,2016,Defensive Midfield,23,12,0,0,80.9,6.2,0
+Fernando Zuqui,2016,Central Midfield,24,13,0,0,89.0,6.2,0
+Lisandro Magallán,2016,Centre-Back,22,9,0,0,87.2,6.1,0
+Cristian Pavón,2015,Right-Back,19,15,7,3,80.4,8.0,1
+Carlos Tévez,2015,Centre-Forward,31,28,11,4,69.4,7.8,1
+Darío Benedetto,2015,Centre-Forward,25,5,2,1,77.2,7.7,1
+Nicolás Lodeiro,2015,Attacking Midfield,26,20,5,5,85.1,7.5,1
+Frank Fabra,2015,Left-Back,24,14,2,4,84.3,7.2,1
+Andrés Chávez,2015,Centre-Forward,24,22,4,3,66.8,7.1,1
+Federico Carrizo,2015,Left Winger,24,16,3,2,70.0,7.0,1
+Pablo Pérez,2015,Central Midfield,29,25,3,1,86.5,6.8,0
+Leonardo Jara,2015,Right-Back,24,20,1,3,78.9,6.7,0
+Sebastián Palacios,2015,Right Winger,23,19,2,1,74.0,6.7,0
+Juan Manuel Insaurralde,2015,Centre-Back,30,27,1,0,83.4,6.5,0
+Marcelo Meli,2015,Central Midfield,23,21,0,2,80.2,6.5,0
+Jonathan Silva,2015,Left-Back,21,23,1,0,81.7,6.4,0
+Rodrigo Bentancur,2015,Defensive Midfield,18,19,1,0,80.4,6.4,0
+Fernando Gago,2015,Defensive Midfield,29,18,1,0,82.3,6.4,0
+Agustín Orión,2015,Goalkeeper,34,25,0,0,0.0,6.3,0
+Nahuel Molina,2015,Right-Back,17,9,0,1,85.6,6.3,0
+Fernando Tobio,2015,Centre-Back,25,20,0,0,84.3,6.3,0
+Cata DíazCata Díaz,2015,Centre-Back,35,21,0,0,81.2,6.3,0
+Gino Peruzzi,2015,Right-Back,23,14,0,0,79.9,6.2,0
+Andrés Cubas,2015,Defensive Midfield,19,15,0,0,85.9,6.2,0
+Guillermo Sara,2015,Goalkeeper,27,9,0,0,0.0,6.1,0
+Nicolás Colazo,2015,Left-Back,24,4,0,0,86.4,6.1,0
+Cristian Erbes,2015,Defensive Midfield,25,4,0,0,81.7,6.1,0
+Pedro Silva Torrejón,2015,Left-Back,18,2,0,0,85.3,6.0,0
+Julián Chicco,2015,Defensive Midfield,17,3,0,0,86.8,6.0,0
+Jonathan Calleri,2014,Centre-Forward,20,51,21,11,68.6,8.2,1
+Daniel Osvaldo,2014,Centre-Forward,28,16,7,2,68.1,7.8,1
+Nicolás Lodeiro,2014,Attacking Midfield,25,31,6,9,83.0,7.6,1
+Andrés Chávez,2014,Centre-Forward,23,33,10,5,66.9,7.6,1
+Juan Manuel Martínez,2014,Right Winger,28,20,7,2,71.4,7.5,1
+Sebastián Palacios,2014,Right Winger,22,23,6,3,76.8,7.3,1
+Marcelo Meli,2014,Central Midfield,22,41,5,7,85.0,7.2,1
+Federico Carrizo,2014,Left Winger,23,35,3,8,68.1,7.2,1
+Emmanuel Gigliotti,2014,Centre-Forward,27,17,5,1,77.8,7.2,1
+Pablo Pérez,2014,Central Midfield,28,25,3,5,85.0,7.1,1
+Guido Vadalá,2014,Attacking Midfield,17,2,0,1,89.6,7.0,0
+Fernando Gago,2014,Defensive Midfield,28,33,4,4,80.4,7.0,1
+Cristian Pavón,2014,Right-Back,18,9,2,0,82.3,6.8,0
+Nicolás Colazo,2014,Left-Back,23,41,2,4,78.1,6.8,0
+Juan Cruz Komar,2014,Centre-Back,17,5,1,0,86.6,6.7,0
+Cata DíazCata Díaz,2014,Centre-Back,34,47,3,1,83.1,6.7,0
+Leandro Marín,2014,Right-Back,22,25,2,2,87.4,6.7,0
+Fabián Monzón,2014,Left-Back,27,24,2,1,82.2,6.6,0
+Gonzalo Castellani,2014,Central Midfield,26,18,0,3,82.8,6.6,0
+Cristian Erbes,2014,Defensive Midfield,24,35,1,1,80.5,6.6,0
+Agustín Orión,2014,Goalkeeper,33,52,0,1,0.0,6.5,0
+Gino Peruzzi,2014,Right-Back,22,28,1,0,80.2,6.5,0
+José Pedro Fuenzalida,2014,Right Winger,29,30,0,1,73.7,6.5,0
+Lisandro Magallán,2014,Centre-Back,20,10,1,0,86.2,6.4,0
+Guillermo Burdisso,2014,Centre-Back,25,11,1,0,81.2,6.4,0
+Andrés Cubas,2014,Defensive Midfield,18,21,1,0,87.0,6.4,0
+Franco Cristaldo,2014,Attacking Midfield,17,14,1,0,89.7,6.4,0
+Rodrigo Bentancur,2014,Defensive Midfield,17,25,0,0,85.2,6.3,0
+Guillermo Sara,2014,Goalkeeper,26,13,0,0,0.0,6.2,0
+Marco Torsiglieri,2014,Centre-Back,26,17,0,0,79.2,6.2,0
+Alexis Rolín,2014,Centre-Back,25,11,0,0,81.4,6.1,0
+Federico Bravo,2014,Central Midfield,20,10,0,0,82.5,6.1,0
+Emanuel Tripodi,2014,Goalkeeper,32,1,0,0,0.0,6.0,0
+Tomás Pochettino,2014,Attacking Midfield,18,1,0,0,83.6,6.0,0
+Pablo Ledesma,2014,Central Midfield,30,2,0,0,86.1,6.0,0
+Emmanuel Gigliotti,2013,Centre-Forward,26,45,18,2,69.1,7.8,1
+Juan Román Riquelme,2013,Attacking Midfield,35,23,7,5,81.9,7.7,1
+Juan Sánchez Miño,2013,Left-Back,23,31,4,8,82.1,7.3,1
+Juan Manuel Martínez,2013,Right Winger,27,37,3,6,76.6,7.1,1
+Emanuel Insúa,2013,Left-Back,22,29,1,6,84.4,6.9,0
+Nicolás Colazo,2013,Left-Back,22,19,3,1,81.1,6.8,0
+Luciano Acosta,2013,Attacking Midfield,19,19,2,2,81.6,6.8,0
+Cristian Erbes,2013,Defensive Midfield,23,37,2,3,88.9,6.8,0
+Cata DíazCata Díaz,2013,Centre-Back,33,38,3,0,87.1,6.7,0
+Fernando Gago,2013,Defensive Midfield,27,28,0,5,88.7,6.7,0
+Matías Caruzzo,2013,Centre-Back,28,6,1,0,78.8,6.6,0
+Claudio Riaño,2013,Centre-Forward,24,25,2,0,66.4,6.6,0
+Agustín Orión,2013,Goalkeeper,32,43,0,0,0.0,6.5,0
+Claudio Pérez,2013,Centre-Back,27,19,1,1,80.3,6.5,0
+Pablo Ledesma,2013,Central Midfield,29,29,0,1,88.0,6.5,0
+Juan Forlín,2013,Centre-Back,25,24,1,0,80.5,6.4,0
+Leandro Marín,2013,Right-Back,21,20,1,0,80.9,6.4,0
+Federico Bravo,2013,Central Midfield,19,16,0,1,88.1,6.3,0
+Hernán Grana,2013,Right-Back,28,16,0,0,83.1,6.2,0
+Nahuel Zárate,2013,Left-Back,20,16,0,0,85.6,6.2,0
+Emanuel Tripodi,2013,Goalkeeper,31,6,0,0,0.0,6.1,0
+Gonzalo Escalante,2013,Central Midfield,20,5,0,0,89.3,6.1,0
+Diego Rivero,2013,Central Midfield,31,6,0,0,85.4,6.1,0
+Joel Acosta,2013,Right Winger,22,7,0,0,68.0,6.1,0
+Francesco Celeste,2013,Right Midfield,19,2,0,0,86.3,6.0,0
+Franco Fragapane,2013,Left Winger,20,3,0,0,75.5,6.0,0
+Santiago Silva,2012,Centre-Forward,31,30,12,1,70.6,7.7,1
+Nicolás Blandi,2012,Centre-Forward,22,27,8,2,65.3,7.4,1
+Lucas Viatri,2012,Centre-Forward,25,25,5,1,66.4,7.0,1
+Walter Erviti,2012,Central Midfield,32,40,3,3,84.7,6.9,0
+Pablo Ledesma,2012,Central Midfield,28,21,3,2,81.2,6.9,0
+Guillermo Burdisso,2012,Centre-Back,23,32,3,2,85.3,6.8,0
+Leandro Paredes,2012,Defensive Midfield,18,21,4,0,86.2,6.8,0
+Juan Román Riquelme,2012,Attacking Midfield,34,13,2,1,88.9,6.8,0
+Rolando Schiavi,2012,Centre-Back,39,19,3,0,85.7,6.7,0
+Sebastián Palacios,2012,Right Winger,20,7,0,2,75.0,6.7,0
+Juan Sánchez Miño,2012,Left-Back,22,29,1,1,86.6,6.6,0
+Pol FernándezPol Fernández,2012,Central Midfield,20,24,2,0,80.6,6.6,0
+Juan Manuel Martínez,2012,Right Winger,26,21,2,0,71.8,6.6,0
+Lautaro Acosta,2012,Left Winger,24,27,0,3,65.4,6.6,0
+Matías Caruzzo,2012,Centre-Back,27,31,1,0,85.1,6.5,0
+Leandro Somoza,2012,Defensive Midfield,31,34,1,0,87.3,6.5,0
+Cristian Erbes,2012,Defensive Midfield,22,26,0,2,87.6,6.5,0
+Agustín Orión,2012,Goalkeeper,31,34,0,0,0.0,6.4,0
+Nicolás Colazo,2012,Left-Back,21,24,0,1,78.7,6.4,0
+Claudio Pérez,2012,Centre-Back,26,15,1,0,80.0,6.4,0
+Clemente Rodríguez,2012,Left-Back,30,33,0,0,78.1,6.4,0
+Emiliano Albín,2012,Right-Back,23,21,0,0,85.7,6.3,0
+Nahuel Zárate,2012,Left-Back,19,13,0,1,79.2,6.3,0
+Óscar UstariÓ. Ustari,2012,Goalkeeper,25,14,0,0,0.0,6.2,0
+Franco Sosa,2012,Right-Back,31,14,0,0,86.2,6.2,0
+Leandro Marín,2012,Right-Back,20,13,0,0,81.6,6.2,0
+Ribair Rodríguez,2012,Defensive Midfield,24,12,0,0,87.1,6.2,0
+Sebastián D’AngeloS. D’Angelo,2012,Goalkeeper,23,4,0,0,0.0,6.1,0
+Lisandro Magallán,2012,Centre-Back,18,11,0,0,79.4,6.1,0
+Christian Cellay,2012,Centre-Back,30,9,0,0,78.7,6.1,0
+Gonzalo Escalante,2012,Central Midfield,19,6,0,0,83.3,6.1,0
+Federico Bravo,2012,Central Midfield,18,11,0,0,83.1,6.1,0
+Diego Rivero,2012,Central Midfield,30,6,0,0,86.4,6.1,0
+Orlando Gaona Lugo,2012,Right Winger,21,5,0,0,71.4,6.1,0
+Agustín García Basso,2012,Centre-Back,20,1,0,0,86.0,6.0,0
+Fernando Evangelista,2012,Centre-Back,20,2,0,0,87.9,6.0,0
+Cristian Álvarez,2012,Attacking Midfield,19,3,0,0,83.3,6.0,0
+Francisco Di Franco,2012,Attacking Midfield,17,3,0,0,85.6,6.0,0
+Juan Román Riquelme,2011,Attacking Midfield,33,38,8,9,89.7,7.6,1
+Santiago Silva,2011,Centre-Forward,30,25,7,5,68.7,7.6,1
+Nicolás Blandi,2011,Centre-Forward,21,23,9,0,69.6,7.5,1
+Darío Cvitanich,2011,Centre-Forward,27,40,10,5,72.1,7.5,1
+Pablo Mouche,2011,Left Winger,23,53,11,8,68.5,7.4,1
+Lucas Viatri,2011,Centre-Forward,24,21,5,3,75.8,7.3,1
+Walter Erviti,2011,Central Midfield,31,47,5,4,87.8,7.0,1
+Juan Sánchez Miño,2011,Left-Back,21,36,5,1,80.6,6.9,0
+Pablo Ledesma,2011,Central Midfield,27,29,4,1,89.4,6.9,0
+Juan Manuel Insaurralde,2011,Centre-Back,26,43,4,0,87.7,6.8,0
+Facundo Roncaglia,2011,Centre-Back,24,46,4,0,81.0,6.8,0
+Clemente Rodríguez,2011,Left-Back,29,43,1,6,82.4,6.8,0
+Cristian Chávez,2011,Attacking Midfield,25,43,2,4,86.0,6.8,0
+Rolando Schiavi,2011,Centre-Back,38,48,2,1,84.8,6.7,0
+Diego Rivero,2011,Central Midfield,29,38,1,2,81.8,6.7,0
+Leandro Somoza,2011,Defensive Midfield,30,41,2,2,88.9,6.7,0
+Sergio Araujo,2011,Centre-Forward,19,14,1,2,69.2,6.7,0
+Orlando Gaona Lugo,2011,Right Winger,20,6,0,2,70.1,6.7,0
+Nicolás Colazo,2011,Left-Back,20,13,1,1,86.1,6.6,0
+Gastón Sauro,2011,Centre-Back,21,6,1,0,87.1,6.6,0
+Pol FernándezPol Fernández,2011,Central Midfield,19,8,0,2,83.1,6.6,0
+Agustín Orión,2011,Goalkeeper,30,48,0,0,0.0,6.5,0
+Franco Sosa,2011,Right-Back,30,23,0,0,79.2,6.3,0
+Matías Caruzzo,2011,Centre-Back,26,23,0,0,83.0,6.3,0
+Cristian Erbes,2011,Defensive Midfield,21,22,0,0,89.2,6.3,0
+Sebastián Sosa,2011,Goalkeeper,24,9,0,0,0.0,6.1,0
+Enzo RuizEnzo Ruiz,2011,Centre-Back,22,4,0,0,78.3,6.1,0
+Leandro Paredes,2011,Defensive Midfield,17,5,0,0,86.6,6.1,0
+Cristian Álvarez,2011,Attacking Midfield,18,4,0,0,85.2,6.1,0
+Sebastián D’AngeloS. D’Angelo,2011,Goalkeeper,22,2,0,0,0.0,6.0,0
+Emanuel Insúa,2011,Left-Back,20,2,0,0,87.5,6.0,0
+David Achucarro,2011,Centre-Back,20,1,0,0,79.0,6.0,0
+Sebastián Battaglia,2011,Defensive Midfield,30,1,0,0,85.5,6.0,0
+Jonathan Mazzola,2011,Defensive Midfield,20,1,0,0,80.9,6.0,0
+Exequiel Benavídez,2011,Defensive Midfield,22,3,0,0,82.0,6.0,0
+Franco Fragapane,2011,Left Winger,18,1,0,0,65.6,6.0,0
+Martín Palermo,2010,Centre-Forward,36,38,14,3,72.9,7.8,1
+Juan Román Riquelme,2010,Attacking Midfield,32,13,4,1,83.0,7.2,1
+Lucas Viatri,2010,Centre-Forward,23,28,7,1,67.2,7.2,1
+Pablo Mouche,2010,Left Winger,22,31,2,8,65.6,7.1,1
+Juan Manuel Insaurralde,2010,Centre-Back,25,36,2,1,81.7,6.7,0
+Nicolás Colazo,2010,Left-Back,19,18,3,0,87.5,6.7,0
+Clemente Rodríguez,2010,Left-Back,28,27,1,3,84.0,6.7,0
+Cristian Chávez,2010,Attacking Midfield,24,35,3,0,82.9,6.7,0
+Sergio Araujo,2010,Centre-Forward,18,9,1,1,71.7,6.7,0
+Christian Cellay,2010,Centre-Back,28,19,2,0,85.3,6.6,0
+Matías Caruzzo,2010,Centre-Back,25,34,0,2,79.6,6.6,0
+Sebastián Battaglia,2010,Defensive Midfield,29,19,1,1,81.8,6.5,0
+Jesús Méndez,2010,Central Midfield,25,12,0,2,82.9,6.5,0
+Leandro Somoza,2010,Defensive Midfield,29,16,0,2,86.1,6.5,0
+Cristian Lucchetti,2010,Goalkeeper,32,26,0,1,0.0,6.4,0
+Fabián Monzón,2010,Left-Back,23,22,0,1,78.6,6.4,0
+Marcelo Cañete,2010,Attacking Midfield,20,7,0,1,82.1,6.4,0
+Walter Erviti,2010,Central Midfield,30,16,1,0,85.2,6.4,0
+Matías Giménez,2010,Left Midfield,25,14,1,0,81.4,6.4,0
+Cristian Erbes,2010,Defensive Midfield,20,11,1,0,83.7,6.4,0
+Javier García,2010,Goalkeeper,23,13,0,1,0.0,6.3,0
+Diego Rivero,2010,Central Midfield,28,10,0,1,81.8,6.3,0
+Gary Medel,2010,Defensive Midfield,22,17,0,0,88.3,6.2,0
+Damián Escudero,2010,Attacking Midfield,23,13,0,0,84.6,6.2,0
+José Calvo,2010,Right-Back,28,5,0,0,79.6,6.1,0
+Enzo RuizEnzo Ruiz,2010,Centre-Back,21,6,0,0,85.1,6.1,0
+Juan Sánchez Miño,2010,Left-Back,20,4,0,0,78.2,6.1,0
+Ricardo Noir,2010,Attacking Midfield,23,8,0,0,84.3,6.1,0
+Leandro Marín,2010,Right-Back,18,2,0,0,86.7,6.0,0
+Gastón Sauro,2010,Centre-Back,20,3,0,0,84.0,6.0,0
+Leandro Paredes,2010,Defensive Midfield,16,1,0,0,89.7,6.0,0
+Esteban Orfano,2010,Right Midfield,18,2,0,0,87.9,6.0,0
+Jonathan Mazzola,2010,Defensive Midfield,19,1,0,0,82.0,6.0,0
+Orlando Gaona Lugo,2010,Right Winger,19,3,0,0,72.7,6.0,0
+Joel Acosta,2010,Right Winger,19,1,0,0,65.8,6.0,0
+Martín Palermo,2009,Centre-Forward,35,36,16,2,66.2,7.9,1
+Juan Román Riquelme,2009,Attacking Midfield,31,24,3,12,88.1,7.7,1
+Nico Gaitán,2009,Attacking Midfield,21,33,7,7,88.0,7.5,1
+Sebastián Battaglia,2009,Defensive Midfield,28,10,3,2,88.1,7.4,1
+Gary Medel,2009,Defensive Midfield,21,29,7,1,82.9,7.2,1
+Federico Insúa,2009,Attacking Midfield,29,30,3,5,88.7,7.0,1
+Matías Giménez,2009,Left Midfield,24,8,2,0,85.0,6.9,0
+Lucas Viatri,2009,Centre-Forward,22,22,4,0,72.5,6.8,0
+Fabián Monzón,2009,Left-Back,22,23,2,2,79.4,6.7,0
+Pablo Mouche,2009,Left Winger,21,20,2,1,69.9,6.7,0
+Guillermo Marino,2009,Central Midfield,28,18,2,0,85.1,6.6,0
+Cristian Chávez,2009,Attacking Midfield,23,26,1,2,86.5,6.6,0
+Gabriel Paletta,2009,Centre-Back,23,22,1,1,85.0,6.5,0
+Ariel Rosada,2009,Defensive Midfield,31,23,0,2,88.0,6.5,0
+Claudio Morel Rodríguez,2009,Left-Back,31,24,0,1,84.2,6.4,0
+Juan Krupoviesa,2009,Left-Back,30,12,1,0,83.2,6.4,0
+Cristian Erbes,2009,Defensive Midfield,19,20,1,0,87.0,6.4,0
+Roberto Abbondanzieri,2009,Goalkeeper,36,22,0,0,0.0,6.3,0
+Ezequiel Muñoz,2009,Centre-Back,18,15,0,1,79.0,6.3,0
+Hugo Ibarra,2009,Right-Back,35,26,0,0,87.9,6.3,0
+Javier García,2009,Goalkeeper,22,15,0,0,0.0,6.2,0
+Gastón Sauro,2009,Centre-Back,19,5,0,0,85.4,6.1,0
+Julio Barroso,2009,Centre-Back,24,7,0,0,85.0,6.1,0
+Jesús Méndez,2009,Central Midfield,24,10,0,0,88.9,6.1,0
+Josué Ayala,2009,Goalkeeper,21,1,0,0,0.0,6.0,0
+Adrián Gunino,2009,Right-Back,20,1,0,0,86.8,6.0,0
+Bréyner Bonilla,2009,Centre-Back,22,3,0,0,81.6,6.0,0
+Sebastián Prediger,2009,Defensive Midfield,22,3,0,0,89.1,6.0,0
+Santiago Villafañe,2009,Defensive Midfield,21,3,0,0,83.4,6.0,0
+Martín Palermo,2008,Centre-Forward,34,26,12,6,72.2,8.2,1
+Rodrigo Palacio,2008,Centre-Forward,26,27,10,6,77.2,7.9,1
+Juan Román Riquelme,2008,Attacking Midfield,30,35,7,9,89.3,7.6,1
+Lucas Viatri,2008,Centre-Forward,21,33,9,5,72.4,7.6,1
+Luciano Figueroa,2008,Centre-Forward,27,21,8,1,74.0,7.5,1
+Nico Gaitán,2008,Attacking Midfield,20,40,5,4,83.2,7.1,1
+Neri Cardozo,2008,Attacking Midfield,21,2,0,1,88.5,7.0,0
+Cristian Chávez,2008,Attacking Midfield,22,18,3,2,82.9,7.0,1
+Fabián Vargas,2008,Central Midfield,28,38,2,7,83.9,7.0,1
+Pablo Mouche,2008,Left Winger,20,29,2,3,67.2,6.8,0
+Sebastián Battaglia,2008,Defensive Midfield,27,40,3,0,80.2,6.7,0
+Leandro Gracián,2008,Attacking Midfield,25,21,2,1,84.3,6.7,0
+Ricardo Noir,2008,Attacking Midfield,21,20,3,0,89.6,6.7,0
+Facundo Roncaglia,2008,Centre-Back,21,30,2,0,83.8,6.6,0
+Juan Forlín,2008,Centre-Back,20,30,2,0,80.8,6.6,0
+Julio Cáceres,2008,Centre-Back,28,37,0,0,82.9,6.5,0
+Claudio Morel Rodríguez,2008,Left-Back,30,31,0,2,80.0,6.5,0
+Hugo Ibarra,2008,Right-Back,34,37,0,1,85.2,6.5,0
+Roberto Abbondanzieri,2008,Goalkeeper,35,29,0,0,0.0,6.4,0
+Juan Krupoviesa,2008,Left-Back,29,21,0,1,84.5,6.4,0
+Álvaro GonzálezÁ. González,2008,Central Midfield,23,7,0,1,89.7,6.4,0
+José Calvo,2008,Right-Back,26,10,0,1,78.2,6.3,0
+Javier García,2008,Goalkeeper,21,14,0,0,0.0,6.2,0
+Gabriel Paletta,2008,Centre-Back,22,18,0,0,87.4,6.2,0
+Mauricio Caranta,2008,Goalkeeper,29,7,0,0,0.0,6.1,0
+Gastón Sauro,2008,Centre-Back,18,5,0,0,79.8,6.1,0
+Julio Barroso,2008,Centre-Back,23,4,0,0,87.5,6.1,0
+Carlos Fondacaro,2008,Right-Back,21,5,0,0,87.1,6.1,0
+Damián Díaz,2008,Attacking Midfield,22,6,0,0,83.7,6.1,0
+Exequiel Benavídez,2008,Defensive Midfield,19,10,0,0,88.5,6.1,0
+Josué Ayala,2008,Goalkeeper,20,1,0,0,0.0,6.0,0
+Ezequiel Muñoz,2008,Centre-Back,17,3,0,0,83.0,6.0,0
+Martín Palermo,2007,Centre-Forward,33,48,31,9,68.2,8.8,1
+Rodrigo Palacio,2007,Centre-Forward,25,47,17,18,77.6,8.4,1
+Juan Román Riquelme,2007,Attacking Midfield,29,22,7,8,86.5,8.0,1
+Leandro Gracián,2007,Attacking Midfield,24,32,6,6,82.2,7.4,1
+Jesús Dátolo,2007,Left Midfield,23,40,7,7,87.5,7.4,1
+Lucas Viatri,2007,Centre-Forward,20,4,1,1,75.3,7.3,0
+Mauro Boselli,2007,Centre-Forward,22,25,4,5,70.1,7.2,1
+Neri Cardozo,2007,Attacking Midfield,20,36,3,6,82.4,7.1,1
+Pablo Ledesma,2007,Central Midfield,23,38,6,1,86.9,7.0,1
+Hugo Ibarra,2007,Right-Back,33,29,0,7,85.8,6.9,0
+Ricardo Noir,2007,Attacking Midfield,20,9,1,2,86.6,6.9,0
+Gabriel Paletta,2007,Centre-Back,21,32,4,0,84.6,6.8,0
+Sebastián Battaglia,2007,Defensive Midfield,26,46,4,0,85.5,6.8,0
+Álvaro GonzálezÁ. González,2007,Central Midfield,22,40,1,4,87.1,6.8,0
+Claudio Morel Rodríguez,2007,Left-Back,29,42,0,4,86.9,6.7,0
+Cristian Chávez,2007,Attacking Midfield,21,21,1,3,88.5,6.7,0
+Nico Gaitán,2007,Attacking Midfield,19,5,1,0,83.7,6.7,0
+Carlos Bueno,2007,Centre-Forward,27,9,1,1,76.6,6.7,0
+Ezequiel Muñoz,2007,Centre-Back,16,4,0,1,81.4,6.6,0
+Fabián Vargas,2007,Central Midfield,27,31,0,3,83.3,6.6,0
+Pablo Mouche,2007,Left Winger,19,6,1,0,68.4,6.6,0
+Nicolás Bertolo,2007,Left Winger,21,4,0,1,73.2,6.6,0
+Mauricio Caranta,2007,Goalkeeper,28,45,0,0,0.0,6.5,0
+Juan Forlín,2007,Centre-Back,19,7,1,0,87.0,6.5,0
+Julio Cáceres,2007,Centre-Back,27,27,1,0,84.4,6.5,0
+Jonatan Maidana,2007,Centre-Back,21,41,0,0,84.1,6.5,0
+Éver BanegaÉ. Banega,2007,Central Midfield,19,16,0,2,81.6,6.5,0
+Facundo Roncaglia,2007,Centre-Back,20,12,0,0,81.5,6.2,0
+Fabián Monzón,2007,Left-Back,20,19,0,0,87.0,6.2,0
+Javier García,2007,Goalkeeper,20,4,0,0,0.0,6.1,0
+Pablo Migliore,2007,Goalkeeper,25,11,0,0,0.0,6.1,0
+Matías Cahais,2007,Centre-Back,19,5,0,0,78.8,6.1,0
+Juan Krupoviesa,2007,Left-Back,28,5,0,0,79.6,6.1,0
+Bruno Urribarri,2007,Left-Back,20,6,0,0,78.1,6.1,0
+Lucas Castromán,2007,Right Midfield,26,5,0,0,86.5,6.1,0
+Matías Silvestre,2007,Centre-Back,22,2,0,0,85.3,6.0,0
+Luis Ibáñez,2007,Left-Back,18,2,0,0,79.0,6.0,0
+Carlos Fondacaro,2007,Right-Back,20,3,0,0,78.1,6.0,0
+Exequiel Benavídez,2007,Defensive Midfield,18,1,0,0,85.7,6.0,0
+Sebastián Nayar,2007,Central Midfield,19,1,0,0,80.9,6.0,0
+Martín Palermo,2006,Centre-Forward,32,46,28,8,75.6,8.7,1
+Rodrigo Palacio,2006,Centre-Forward,24,44,23,9,71.9,8.5,1
+Juan Román Riquelme,2006,Attacking Midfield,28,26,10,11,83.9,8.3,1
+Neri Cardozo,2006,Attacking Midfield,19,50,10,6,81.1,7.3,1
+Mauro Boselli,2006,Centre-Forward,21,21,5,1,66.2,7.1,1
+Pablo Ledesma,2006,Central Midfield,22,48,2,9,86.9,7.0,1
+Bruno Marioni,2006,Left Winger,31,18,3,2,72.2,7.0,1
+Claudio Morel Rodríguez,2006,Left-Back,28,45,1,6,78.9,6.8,0
+Hugo Ibarra,2006,Right-Back,32,41,3,1,86.4,6.8,0
+Cata DíazCata Díaz,2006,Centre-Back,26,41,3,2,81.2,6.8,0
+Clemente Rodríguez,2006,Left-Back,24,27,3,2,84.8,6.8,0
+Juan Krupoviesa,2006,Left-Back,27,12,2,1,83.1,6.8,0
+Sebastián Battaglia,2006,Defensive Midfield,25,23,3,0,86.5,6.7,0
+Guillermo Marino,2006,Central Midfield,25,21,2,1,81.4,6.7,0
+Jesús Dátolo,2006,Left Midfield,22,34,2,2,89.2,6.7,0
+Matías Silvestre,2006,Centre-Back,21,29,1,1,83.4,6.6,0
+Fernando Gago,2006,Defensive Midfield,20,20,1,2,81.7,6.6,0
+Guillermo Barros Schelotto,2006,Centre-Forward,33,16,1,2,73.6,6.6,0
+Andrés Franzoia,2006,Centre-Forward,20,11,1,1,73.2,6.6,0
+Nicolás Bertolo,2006,Left Winger,20,9,1,0,76.7,6.5,0
+Mauricio Caranta,2006,Goalkeeper,27,31,0,0,0.0,6.4,0
+Jonatan Maidana,2006,Centre-Back,20,23,1,0,83.9,6.4,0
+Éver BanegaÉ. Banega,2006,Central Midfield,18,28,0,1,82.3,6.4,0
+Sergio Orteman,2006,Defensive Midfield,27,20,1,0,83.4,6.4,0
+Aldo Bobadilla,2006,Goalkeeper,30,22,0,0,0.0,6.3,0
+José Calvo,2006,Right-Back,24,10,0,0,79.9,6.1,0
+Bruno Urribarri,2006,Left-Back,19,4,0,0,78.4,6.1,0
+Matías Cahais,2006,Centre-Back,18,7,0,0,78.2,6.1,0
+Santiago Villafañe,2006,Defensive Midfield,18,4,0,0,88.8,6.1,0
+Marcelo Delgado,2006,Centre-Forward,33,6,0,0,68.1,6.1,0
+Marcos Mondaini,2006,Centre-Forward,21,4,0,0,76.7,6.1,0
+Pablo Migliore,2006,Goalkeeper,24,3,0,0,0.0,6.0,0
+Fabián Vargas,2006,Central Midfield,26,2,0,0,89.4,6.0,0
+Cristian Chávez,2006,Attacking Midfield,20,2,0,0,82.6,6.0,0
+Rodrigo Palacio,2005,Centre-Forward,23,36,22,0,69.8,8.3,1
+Martín Palermo,2005,Centre-Forward,31,38,19,3,74.5,8.2,1
+Federico Insúa,2005,Attacking Midfield,25,37,11,0,89.1,7.4,1
+Daniel Bilos,2005,Left Midfield,24,33,4,1,86.7,6.9,0
+Marcelo Delgado,2005,Centre-Forward,32,17,4,0,73.2,6.9,0
+Cata DíazCata Díaz,2005,Centre-Back,25,40,4,0,83.0,6.8,0
+Matías Silvestre,2005,Centre-Back,20,23,4,0,78.4,6.8,0
+Guillermo Barros Schelotto,2005,Centre-Forward,32,24,3,1,68.1,6.8,0
+Neri Cardozo,2005,Attacking Midfield,18,33,1,2,84.9,6.6,0
+Hugo Ibarra,2005,Right-Back,31,26,1,0,80.5,6.5,0
+Juan Krupoviesa,2005,Left-Back,26,33,1,0,84.1,6.5,0
+Fernando Gago,2005,Defensive Midfield,19,37,0,1,80.5,6.5,0
+Roberto Abbondanzieri,2005,Goalkeeper,32,33,0,0,0.0,6.4,0
+Pablo Ledesma,2005,Central Midfield,21,25,1,0,87.6,6.4,0
+Claudio Morel Rodríguez,2005,Left-Back,27,23,0,0,87.6,6.3,0
+Rolando Schiavi,2005,Centre-Back,32,19,0,0,87.7,6.2,0
+José Calvo,2005,Right-Back,23,17,0,0,81.0,6.2,0
+Fabián Vargas,2005,Central Midfield,25,13,0,0,82.4,6.2,0
+Guillermo Marino,2005,Central Midfield,24,16,0,0,81.4,6.2,0
+Sebastián Battaglia,2005,Defensive Midfield,24,19,0,0,82.4,6.2,0
+Ezequiel Medrán,2005,Goalkeeper,24,4,0,0,0.0,6.1,0
+Diego Cagna,2005,Right Midfield,35,9,0,0,82.8,6.1,0
+Pablo Migliore,2005,Goalkeeper,23,2,0,0,0.0,6.0,0
+Julio Barroso,2005,Centre-Back,20,1,0,0,80.8,6.0,0
+Jonatan Maidana,2005,Centre-Back,19,2,0,0,83.0,6.0,0
+Fredy Guarín,2005,Central Midfield,19,2,0,0,89.9,6.0,0
+Andrés Franzoia,2005,Centre-Forward,19,3,0,0,73.2,6.0,0
+Martín Palermo,2004,Centre-Forward,30,41,22,6,77.3,8.4,1
+Rodrigo Palacio,2004,Centre-Forward,22,31,10,6,74.1,7.8,1
+Andrés Guglielminpietro,2004,Left Midfield,30,33,11,5,82.2,7.7,1
+Neri Cardozo,2004,Attacking Midfield,17,42,7,8,84.2,7.4,1
+Guillermo Barros Schelotto,2004,Centre-Forward,31,27,4,6,69.4,7.2,1
+Diego Cagna,2004,Right Midfield,34,40,7,1,88.2,7.1,1
+Rolando Schiavi,2004,Centre-Back,31,42,6,2,86.0,7.0,1
+BaianoBaiano,2004,Right-Back,26,15,2,3,83.4,7.0,1
+Marcelo Delgado,2004,Centre-Forward,31,28,3,3,71.7,6.9,0
+Mauro Boselli,2004,Centre-Forward,19,10,2,1,69.7,6.9,0
+Fernando Gago,2004,Defensive Midfield,18,24,0,4,80.1,6.6,0
+Roberto Abbondanzieri,2004,Goalkeeper,31,50,0,0,0.0,6.5,0
+Claudio Morel Rodríguez,2004,Left-Back,26,33,0,1,79.9,6.5,0
+José Calvo,2004,Right-Back,22,33,0,1,87.0,6.5,0
+Raúl Cascini,2004,Defensive Midfield,33,26,0,2,84.3,6.5,0
+Pablo Ledesma,2004,Central Midfield,20,34,1,0,81.2,6.5,0
+Cristian Traverso,2004,Centre-Back,32,23,0,1,80.3,6.4,0
+Matías Donnet,2004,Attacking Midfield,24,21,0,1,85.1,6.4,0
+Pablo Jerez,2004,Right-Back,20,9,0,1,86.9,6.3,0
+Fabián Vargas,2004,Central Midfield,24,25,0,0,88.6,6.3,0
+Aníbal Matellán,2004,Centre-Back,27,19,0,0,86.1,6.2,0
+Matías Silvestre,2004,Centre-Back,19,15,0,0,81.2,6.2,0
+Pablo Álvarez,2004,Right-Back,20,16,0,0,79.1,6.2,0
+Ezequiel Medrán,2004,Goalkeeper,23,7,0,0,0.0,6.1,0
+Luis Miguel Escalada,2004,Centre-Forward,18,8,0,0,69.2,6.1,0
+Carlos Tévez,2003,Centre-Forward,19,43,18,10,66.0,8.2,1
+Guillermo Barros Schelotto,2003,Centre-Forward,30,33,10,9,68.0,7.9,1
+Antonio Barijho,2003,Centre-Forward,26,19,8,1,73.2,7.6,1
+Matías Donnet,2003,Attacking Midfield,23,34,7,5,80.3,7.4,1
+Neri Cardozo,2003,Attacking Midfield,16,24,5,5,89.1,7.4,1
+Javier Villarreal,2003,Right Midfield,24,29,6,4,83.1,7.3,1
+Franco Cángele,2003,Second Striker,18,31,6,4,75.5,7.2,1
+IarleyIarley,2003,Centre-Forward,29,34,5,2,68.8,7.0,1
+Rolando Schiavi,2003,Centre-Back,30,52,5,0,81.1,6.8,0
+Clemente Rodríguez,2003,Left-Back,21,37,3,2,81.3,6.8,0
+Sebastián Battaglia,2003,Defensive Midfield,22,18,3,1,85.2,6.8,0
+Nicolás Burdisso,2003,Centre-Back,22,39,2,0,84.4,6.7,0
+Diego Cagna,2003,Right Midfield,33,46,2,2,84.3,6.7,0
+Fabián Vargas,2003,Central Midfield,23,33,2,2,81.1,6.7,0
+José Calvo,2003,Right-Back,21,29,1,2,82.7,6.6,0
+Raúl Cascini,2003,Defensive Midfield,32,47,1,1,85.1,6.6,0
+Roberto Colautti,2003,Centre-Forward,21,11,1,1,67.1,6.6,0
+Roberto Abbondanzieri,2003,Goalkeeper,30,54,0,1,0.0,6.5,0
+Pablo Jerez,2003,Right-Back,19,29,0,2,85.3,6.5,0
+Raúl Estévez,2003,Right Winger,25,10,0,2,77.1,6.5,0
+Miguel Caneo,2003,Attacking Midfield,20,19,1,0,82.5,6.4,0
+Diego Crosa,2003,Centre-Back,27,13,0,0,86.9,6.2,0
+Willy CaballeroWilly Caballero,2003,Goalkeeper,21,8,0,0,0.0,6.1,0
+Matías Silvestre,2003,Centre-Back,18,6,0,0,79.2,6.1,0
+Joel Barbosa,2003,Right-Back,20,7,0,0,85.1,6.1,0
+Pablo Álvarez,2003,Right-Back,19,10,0,0,85.6,6.1,0
+Pablo Ledesma,2003,Central Midfield,19,10,0,0,80.3,6.1,0
+Víctor Ormazabal,2003,Central Midfield,18,7,0,0,87.6,6.1,0
+Facundo Imboden,2003,Centre-Back,23,1,0,0,83.6,6.0,0
+Federico León,2003,Centre-Back,18,1,0,0,85.7,6.0,0
+Mikael Yourassowsky,2003,Left-Back,20,2,0,0,82.9,6.0,0
+César La Paglia,2003,Attacking Midfield,24,1,0,0,86.4,6.0,0
+Héctor Carballo,2003,Defensive Midfield,23,1,0,0,84.1,6.0,0
+Mauro Boselli,2003,Centre-Forward,18,1,0,0,76.3,6.0,0
+Carlos Tévez,2002,Centre-Forward,18,42,16,15,66.5,8.4,1
+Marcelo Delgado,2002,Centre-Forward,29,45,18,13,73.1,8.3,1
+Guillermo Barros Schelotto,2002,Centre-Forward,29,29,15,3,66.0,8.1,1
+Alfredo Moreno,2002,Centre-Forward,22,11,5,0,69.7,7.5,1
+Jonathan Fabbro,2002,Attacking Midfield,20,7,2,1,82.0,7.2,1
+Rolando Schiavi,2002,Centre-Back,29,33,6,0,87.2,7.0,1
+Ezequiel González,2002,Attacking Midfield,21,26,4,2,80.7,7.0,1
+Matías Donnet,2002,Attacking Midfield,22,31,5,1,87.7,7.0,1
+Hugo Ibarra,2002,Right-Back,28,35,4,1,80.0,6.9,0
+Raúl Estévez,2002,Right Winger,24,26,1,6,69.3,6.9,0
+Clemente Rodríguez,2002,Left-Back,20,47,2,5,78.9,6.8,0
+Sebastián Battaglia,2002,Defensive Midfield,21,37,3,2,81.4,6.8,0
+Javier Villarreal,2002,Right Midfield,23,26,3,2,80.1,6.8,0
+Raúl Cascini,2002,Defensive Midfield,31,40,1,3,88.2,6.7,0
+José Calvo,2002,Right-Back,20,11,1,1,86.3,6.6,0
+Franco Cángele,2002,Second Striker,17,13,2,0,65.8,6.6,0
+Roberto Abbondanzieri,2002,Goalkeeper,29,49,0,0,0.0,6.5,0
+Nicolás Burdisso,2002,Centre-Back,21,45,0,0,78.5,6.5,0
+Diego Crosa,2002,Centre-Back,26,44,0,1,81.3,6.5,0
+Matías Silvestre,2002,Centre-Back,17,8,1,0,83.4,6.5,0
+Gustavo Pinto,2002,Central Midfield,23,25,1,1,87.1,6.5,0
+Diego Cagna,2002,Right Midfield,32,24,0,1,88.0,6.4,0
+Miguel Caneo,2002,Attacking Midfield,19,14,1,0,87.3,6.4,0
+Pablo Jerez,2002,Right-Back,18,14,0,0,81.9,6.2,0
+Willy CaballeroWilly Caballero,2002,Goalkeeper,20,7,0,0,0.0,6.1,0
+Luis Amaranto Perea,2002,Centre-Back,23,4,0,0,80.7,6.1,0
+Pablo Álvarez,2002,Right-Back,18,4,0,0,81.6,6.1,0
+César González,2002,Centre-Back,20,5,0,0,80.8,6.1,0
+Gustavo Eberto,2002,Goalkeeper,18,1,0,0,0.0,6.0,0
+Fabián Vargas,2002,Central Midfield,22,3,0,0,89.9,6.0,0
+Juan Pablo Caffa,2002,Left Midfield,17,1,0,0,87.7,6.0,0
+Gastón Sangoy,2002,Right Winger,17,2,0,0,76.2,6.0,0
+Juan Román Riquelme,2001,Attacking Midfield,23,26,10,14,84.4,8.6,1
+Guillermo Barros Schelotto,2001,Centre-Forward,28,28,10,11,72.1,8.2,1
+Walter Gaitán,2001,Attacking Midfield,24,28,9,4,85.0,7.6,1
+Marcelo Delgado,2001,Centre-Forward,28,33,8,7,77.6,7.6,1
+Ariel Carreño,2001,Centre-Forward,22,19,5,3,75.1,7.4,1
+Antonio Barijho,2001,Centre-Forward,24,6,2,0,67.4,7.1,0
+Rolando Schiavi,2001,Centre-Back,28,37,5,1,78.7,6.9,0
+Christian Giménez,2001,Attacking Midfield,20,31,4,1,80.3,6.9,0
+Sebastián Battaglia,2001,Defensive Midfield,20,27,3,1,86.8,6.8,0
+Nicolás Burdisso,2001,Centre-Back,20,33,2,2,78.5,6.7,0
+Jorge Martínez,2001,Right-Back,28,23,2,1,79.7,6.7,0
+Clemente Rodríguez,2001,Left-Back,19,33,0,4,87.5,6.7,0
+Omar Pérez,2001,Attacking Midfield,20,27,0,5,81.2,6.7,0
+Carlos Tévez,2001,Centre-Forward,17,16,2,1,77.2,6.7,0
+José Calvo,2001,Right-Back,19,28,2,0,86.1,6.6,0
+Cristian Traverso,2001,Centre-Back,29,37,1,0,79.0,6.6,0
+Naohiro Takahara,2001,Centre-Forward,22,6,1,0,72.8,6.6,0
+Roberto Abbondanzieri,2001,Goalkeeper,28,34,0,0,0.0,6.4,0
+César González,2001,Centre-Back,19,11,1,0,81.0,6.4,0
+Gustavo Pinto,2001,Central Midfield,22,27,0,0,83.1,6.4,0
+Jorginho PaulistaJorginho Paulista,2001,Left-Back,21,11,0,1,84.1,6.3,0
+Julio Marchant,2001,Right Midfield,21,10,0,1,89.1,6.3,0
+Mauricio Serna,2001,Defensive Midfield,33,24,0,0,85.2,6.3,0
+Óscar CórdobaÓ. Córdoba,2001,Goalkeeper,31,14,0,0,0.0,6.2,0
+Willy CaballeroWilly Caballero,2001,Goalkeeper,19,4,0,0,0.0,6.1,0
+Joel Barbosa,2001,Right-Back,18,9,0,0,87.7,6.1,0
+Nahuel Fioretto,2001,Left Midfield,20,4,0,0,82.6,6.1,0
+Javier Villarreal,2001,Right Midfield,22,9,0,0,86.6,6.1,0
+Roberto Colautti,2001,Centre-Forward,19,3,0,0,76.6,6.0,0
+Martín Palermo,2000,Centre-Forward,26,18,11,1,70.9,8.2,1
+Juan Román Riquelme,2000,Attacking Midfield,22,41,13,12,86.0,8.0,1
+Marcelo Delgado,2000,Centre-Forward,27,40,12,11,75.2,8.0,1
+Guillermo Barros Schelotto,2000,Centre-Forward,27,30,11,5,68.8,7.8,1
+Antonio Barijho,2000,Centre-Forward,23,28,9,4,69.8,7.6,1
+Omar Pérez,2000,Attacking Midfield,19,29,6,0,80.2,7.0,1
+Walter Gaitán,2000,Attacking Midfield,23,23,5,1,89.7,7.0,1
+Jorge Bermúdez,2000,Centre-Back,29,39,5,1,81.7,6.9,0
+Hugo Ibarra,2000,Right-Back,26,41,2,3,85.3,6.8,0
+Matías Arce,2000,Central Midfield,20,7,1,1,88.3,6.8,0
+Gustavo Barros Schelotto,2000,Central Midfield,27,14,2,1,82.9,6.8,0
+Nicolás Burdisso,2000,Centre-Back,19,32,2,1,79.6,6.7,0
+Christian Giménez,2000,Attacking Midfield,19,16,2,1,82.1,6.7,0
+Aníbal Matellán,2000,Centre-Back,23,40,1,0,84.0,6.6,0
+Mauricio Serna,2000,Defensive Midfield,32,37,1,1,85.2,6.6,0
+Óscar CórdobaÓ. Córdoba,2000,Goalkeeper,30,37,0,1,0.0,6.5,0
+Clemente Rodríguez,2000,Left-Back,18,28,1,1,87.5,6.5,0
+Julio Marchant,2000,Right Midfield,20,29,0,2,88.7,6.5,0
+Fernando Pandolfi,2000,Centre-Forward,26,16,1,1,71.7,6.5,0
+Sebastián Battaglia,2000,Defensive Midfield,19,23,0,1,81.8,6.4,0
+Gustavo Pinto,2000,Central Midfield,21,25,1,0,83.0,6.4,0
+Roberto Abbondanzieri,2000,Goalkeeper,27,22,0,0,0.0,6.3,0
+José Pereda,2000,Defensive Midfield,26,21,0,0,84.3,6.3,0
+José Calvo,2000,Right-Back,18,12,0,0,79.6,6.2,0
+Javier Villarreal,2000,Right Midfield,21,14,0,0,81.8,6.2,0
+Hernán Medina,2000,Centre-Back,25,7,0,0,78.6,6.1,0
+José Basualdo,2000,Central Midfield,37,8,0,0,86.1,6.1,0
+Martín Andrizzi,2000,Left Midfield,23,1,0,0,87.1,6.0,0
+Carlos Quiñónez,2000,Midfield,20,1,0,0,81.4,6.0,0
+Sergio Guillermo,2000,Attack,20,1,0,0,67.6,6.0,0
+Julio César Alcorse,2000,Centre-Forward,18,1,0,0,72.7,6.0,0
