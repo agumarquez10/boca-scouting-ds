@@ -1,12 +1,15 @@
 import pandas as pd
 import numpy as np
 import re
+import os
 
-DATA_DIR = 'C:/Users/Agu/Desktop/boca-scouting-ds/data'
+# Ruta relativa al proyecto (funciona desde cualquier lugar)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(SCRIPT_DIR, '..', 'data')
 
 # Load both datasets
-df_modern = pd.read_csv(f'{DATA_DIR}/adn_boca_real.csv', encoding='utf-8-sig')
-df_hist = pd.read_csv(f'{DATA_DIR}/adn_boca_historical_raw.csv', encoding='utf-8-sig')
+df_modern = pd.read_csv(os.path.join(DATA_DIR, 'adn_boca_real.csv'), encoding='utf-8-sig')
+df_hist = pd.read_csv(os.path.join(DATA_DIR, 'adn_boca_historical_raw.csv'), encoding='utf-8-sig')
 
 print(f'Modern (2010-2024): {len(df_modern)} records')
 print(f'Historical (2000-2009): {len(df_hist)} records')
@@ -65,21 +68,43 @@ def fix_encoding(name):
 
 combined['nombre'] = combined['nombre'].apply(fix_encoding)
 
-# Recompute rating and etiqueta for consistency
-def compute_rating(row):
-    gpg = row['goles'] / max(row['partidos'], 1)
-    apg = row['asistencias'] / max(row['partidos'], 1)
-    mp = min(row['partidos'] / 38, 1.0)
-    return min(round(6.0 + gpg * 3.0 + apg * 2.0 + mp * 0.5, 1), 9.5)
+# ============================================================
+# CORRECCIÓN 1: Rating original de la API (NO recalcular)
+# Usamos el rating que viene de la fuente de datos.
+# Si no existe, lo calculamos como fallback pero lo marcamos.
+# ============================================================
+if 'rating' not in combined.columns or combined['rating'].isna().all():
+    print("\n⚠️  Rating no disponible en datos originales, calculando fallback...")
+    def compute_rating_fallback(row):
+        gpg = row['goles'] / max(row['partidos'], 1)
+        apg = row['asistencias'] / max(row['partidos'], 1)
+        mp = min(row['partidos'] / 38, 1.0)
+        return min(round(6.0 + gpg * 3.0 + apg * 2.0 + mp * 0.5, 1), 9.5)
+    combined['rating'] = combined.apply(compute_rating_fallback, axis=1)
+else:
+    print(f"\n[OK] Rating original preserved (range: {combined['rating'].min():.1f} - {combined['rating'].max():.1f})")
 
-combined['rating'] = combined.apply(compute_rating, axis=1)
-combined['etiqueta'] = ((combined['rating'] >= 7.0) & 
-                         ((combined['goles'] + combined['asistencias']) > 2)).astype(int)
+# ============================================================
+# CORRECCIÓN 2: Etiqueta más robusta
+# Definición: jugador con buen rendimiento整体 Y contribución ofensiva clara
+# Usamos el rating original + goles+asistencias como proxy
+# ============================================================
+combined['contribucion_ofensiva'] = combined['goles'] + combined['asistencias']
+
+# Definición robusta: rating >= 7.0 Y al menos 3 goles+asistencias en la temporada
+# (más exigente que >2 para reducir falsos positivos)
+combined['etiqueta'] = (
+    (combined['rating'] >= 7.0) & 
+    (combined['contribucion_ofensiva'] >= 3)
+).astype(int)
+
+print(f'\nEtiqueta distribution (nueva definición):')
+print(combined['etiqueta'].value_counts().to_string())
 
 # Sort
 combined = combined.sort_values(['temporada', 'rating'], ascending=[False, False]).reset_index(drop=True)
 
-# Select final columns
+# Select final columns (SIN rating en features para evitar leakage)
 final_cols = ['nombre', 'temporada', 'posicion', 'edad', 'partidos',
               'goles', 'asistencias', 'pases_precisos', 'rating', 'etiqueta']
 combined = combined[final_cols].copy()
@@ -99,25 +124,74 @@ for name_search in key_players:
             print(f'  {int(r["temporada"])} | {r["posicion"]:20s} | g={int(r["goles"]):2d} | a={int(r["asistencias"]):2d} | rt={r["rating"]} | et={int(r["etiqueta"])}')
 
 # Save final dataset
-combined.to_csv(f'{DATA_DIR}/adn_boca_real.csv', index=False, encoding='utf-8-sig')
+combined.to_csv(os.path.join(DATA_DIR, 'adn_boca_real.csv'), index=False, encoding='utf-8-sig')
 print(f'\nSaved to adn_boca_real.csv')
 
-# Create features version
+# ============================================================
+# CORRECCIÓN 3: Features derivadas SIN data leakage
+# NO incluir rating ni variables derivadas del rating
+# ============================================================
 df_exp = combined.copy()
+
+# Recrear contribucion_ofensiva en df_exp (no estaba en final_cols)
+df_exp['contribucion_ofensiva'] = df_exp['goles'] + df_exp['asistencias']
+
+# --- Features de tasa (NO derivadas del rating) ---
 df_exp['goles_por_partido'] = (df_exp['goles'] / df_exp['partidos'].replace(0, np.nan)).fillna(0)
 df_exp['asist_por_partido'] = (df_exp['asistencias'] / df_exp['partidos'].replace(0, np.nan)).fillna(0)
-df_exp['rendimiento'] = df_exp['rating'] * (df_exp['partidos'] / 38)
-df_exp['participacion_gol'] = ((df_exp['goles'] + df_exp['asistencias']) / df_exp['partidos'].replace(0, np.nan)).fillna(0)
-df_exp['experiencia'] = df_exp['temporada'] - (2024 - df_exp['edad'])
-df_exp['pases_norm'] = df_exp['pases_precisos'] / 90
-df_exp['perfil_ofensivo'] = (df_exp['posicion'].isin(['Attacking Midfield', 'Left Winger', 'Right Winger',
-                                                       'Centre-Forward', 'Secondary Striker'])).astype(int)
+df_exp['contribucion_gol'] = ((df_exp['goles'] + df_exp['asistencias']) / df_exp['partidos'].replace(0, np.nan)).fillna(0)
 
-df_exp.to_csv(f'{DATA_DIR}/adn_boca_real_features.csv', index=False, encoding='utf-8-sig')
+# --- CORRECCIÓN: Experiencia real ---
+# Contamos cuántas temporadas distintas tiene cada jugador en el dataset
+seasons_per_player = combined.groupby('nombre')['temporada'].nunique().reset_index()
+seasons_per_player.columns = ['nombre', 'temporadas_en_dataset']
+df_exp = df_exp.merge(seasons_per_player, on='nombre', how='left')
+
+# Edad estimada de debut: edad actual - (2024 - temporada_actual)
+# Para jugadores actuales (temporada=2024): edad_debut = edad
+# Para jugadores históricos: estimamos
+df_exp['edad_estimada_debut'] = df_exp['edad'] - (2024 - df_exp['temporada'])
+# Clip para que no sea menor a 15 años (razonable)
+df_exp['edad_estimada_debut'] = df_exp['edad_estimada_debut'].clip(lower=15)
+
+# Experiencia = temporadas activas en nuestro dataset (proxy de trayectoria)
+df_exp['experiencia'] = df_exp['temporadas_en_dataset']
+
+# --- Otras features útiles ---
+df_exp['promedio_goles_por_temporada'] = df_exp['goles'] / df_exp['experiencia'].replace(0, 1)
+df_exp['promedio_asistencias_por_temporada'] = df_exp['asistencias'] / df_exp['experiencia'].replace(0, 1)
+df_exp['proporcion_goles'] = (df_exp['goles'] / df_exp['contribucion_ofensiva'].replace(0, 1)).fillna(0)
+df_exp['pases_norm'] = df_exp['pases_precisos'] / 90
+
+# --- Feature categórica: perfil ofensivo ---
+df_exp['perfil_ofensivo'] = (df_exp['posicion'].isin([
+    'Attacking Midfield', 'Left Winger', 'Right Winger',
+    'Centre-Forward', 'Secondary Striker'
+])).astype(int)
+
+# --- Feature: participación en el equipo ---
+# Partidos jugados como proporción de una temporada completa (38 partidos)
+df_exp['partidos_por_temporada'] = df_exp['partidos'] / df_exp['experiencia'].replace(0, 1)
+
+# ============================================================
+# CORRECCIÓN 4: Guardar dataset de features SIN rating
+# Solo features que NO son derivadas del rating
+# ============================================================
+feature_cols = ['nombre', 'temporada', 'posicion', 'edad', 'partidos',
+                'goles', 'asistencias', 'pases_precisos',
+                'etiqueta',  # target
+                'goles_por_partido', 'asist_por_partido', 'contribucion_gol',
+                'experiencia', 'edad_estimada_debut', 'temporadas_en_dataset',
+                'promedio_goles_por_temporada', 'promedio_asistencias_por_temporada',
+                'proporcion_goles', 'pases_norm', 'perfil_ofensivo',
+                'partidos_por_temporada']
+df_exp = df_exp[feature_cols].copy()
+
+df_exp.to_csv(os.path.join(DATA_DIR, 'adn_boca_real_features.csv'), index=False, encoding='utf-8-sig')
 print(f'Saved features to adn_boca_real_features.csv')
+print(f'Features: {[c for c in feature_cols if c not in ["nombre","temporada","etiqueta"]]}')
 
 # File sizes
-import os
 for f in ['adn_boca_real.csv', 'adn_boca_real_features.csv']:
-    size = os.path.getsize(f'{DATA_DIR}/{f}')
+    size = os.path.getsize(os.path.join(DATA_DIR, f))
     print(f'{f}: {size:,} bytes')
