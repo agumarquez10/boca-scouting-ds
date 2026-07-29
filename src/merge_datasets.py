@@ -147,12 +147,11 @@ seasons_per_player = combined.groupby('nombre')['temporada'].nunique().reset_ind
 seasons_per_player.columns = ['nombre', 'temporadas_en_dataset']
 df_exp = df_exp.merge(seasons_per_player, on='nombre', how='left')
 
-# Edad estimada de debut: edad actual - (2024 - temporada_actual)
-# Para jugadores actuales (temporada=2024): edad_debut = edad
-# Para jugadores históricos: estimamos
-df_exp['edad_estimada_debut'] = df_exp['edad'] - (2024 - df_exp['temporada'])
-# Clip para que no sea menor a 15 años (razonable)
-df_exp['edad_estimada_debut'] = df_exp['edad_estimada_debut'].clip(lower=15)
+# Edad del jugador en su primer registro en el dataset (proxy de edad debut)
+primera_temp = combined.groupby('nombre')['temporada'].min().reset_index()
+primera_temp.columns = ['nombre', 'primera_temporada']
+df_exp = df_exp.merge(primera_temp, on='nombre', how='left')
+df_exp['edad_primer_registro'] = df_exp['edad'] - (df_exp['temporada'] - df_exp['primera_temporada'])
 
 # Experiencia = temporadas activas en nuestro dataset (proxy de trayectoria)
 df_exp['experiencia'] = df_exp['temporadas_en_dataset']
@@ -181,7 +180,8 @@ feature_cols = ['nombre', 'temporada', 'posicion', 'edad', 'partidos',
                 'goles', 'asistencias', 'pases_precisos',
                 'etiqueta',  # target
                 'goles_por_partido', 'asist_por_partido', 'contribucion_gol',
-                'experiencia', 'edad_estimada_debut', 'temporadas_en_dataset',
+                'experiencia', 'edad_primer_registro', 'primera_temporada',
+                'temporadas_en_dataset',
                 'promedio_goles_por_temporada', 'promedio_asistencias_por_temporada',
                 'proporcion_goles', 'pases_norm', 'perfil_ofensivo',
                 'partidos_por_temporada']
