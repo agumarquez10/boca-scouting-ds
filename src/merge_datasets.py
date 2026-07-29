@@ -160,7 +160,6 @@ df_exp['experiencia'] = df_exp['temporadas_en_dataset']
 df_exp['promedio_goles_por_temporada'] = df_exp['goles'] / df_exp['experiencia'].replace(0, 1)
 df_exp['promedio_asistencias_por_temporada'] = df_exp['asistencias'] / df_exp['experiencia'].replace(0, 1)
 df_exp['proporcion_goles'] = (df_exp['goles'] / df_exp['contribucion_ofensiva'].replace(0, 1)).fillna(0)
-df_exp['pases_norm'] = df_exp['pases_precisos'] / 90
 
 # --- Feature categórica: perfil ofensivo ---
 df_exp['perfil_ofensivo'] = (df_exp['posicion'].isin([
@@ -183,7 +182,7 @@ feature_cols = ['nombre', 'temporada', 'posicion', 'edad', 'partidos',
                 'experiencia', 'edad_primer_registro', 'primera_temporada',
                 'temporadas_en_dataset',
                 'promedio_goles_por_temporada', 'promedio_asistencias_por_temporada',
-                'proporcion_goles', 'pases_norm', 'perfil_ofensivo',
+                'proporcion_goles', 'perfil_ofensivo',
                 'partidos_por_temporada']
 df_exp = df_exp[feature_cols].copy()
 
