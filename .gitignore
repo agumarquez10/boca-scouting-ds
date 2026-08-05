@@ -1,0 +1,23 @@
+# Secrets
+.env
+secrets/
+
+# Datos y modelos (regenerables)
+data/
+models/
+
+# Salidas de graficos
+outputs/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Entornos
+venv/
+.venv/
+
+# OS
+Thumbs.db
+.DS_Store

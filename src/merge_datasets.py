@@ -15,28 +15,36 @@ print(f'Modern (2010-2024): {len(df_modern)} records')
 print(f'Historical (2000-2009): {len(df_hist)} records')
 
 # Fix names that have shortname concatenated
+# Patterns observed in source data:
+#   "Carlos TevezC. Tevez"        -> full name + shortname pegado
+#   "IarleyIarley"                -> nombre duplicado exacto
+#   "Pol FernandezPol Fernandez"  -> nombre y apellido duplicados exactos
 def clean_name(raw):
     if not isinstance(raw, str):
         return raw
-    # Pattern: "Name SurnameX. SurnamePosition" or similar
-    # First try: find the short name pattern before the position
-    # The typical Transfermarkt format is: "Full NameF. NamePosition"
-    # We want just "Full Name"
-    
-    # Remove the duplicated short name suffix
-    # Pattern: after the full name, there's a capital letter + period + space + capital letter + text
-    # e.g., "Carlos TevezC. TevezCentre-Forward" -> "Carlos Tevez"
-    m = re.match(r'^([A-Za-zÀ-ÿ\s.]+?)(?:[A-Z]\.\s*[A-Za-zÀ-ÿ]+)+', raw)
+    s = raw.strip()
+    if not s:
+        return s
+
+    # Patron 1: "Nombre CompletoX. Apellido" (shortname pegado al final).
+    # Solo cortamos si el apellido del shortname coincide con el apellido real,
+    # para no romper segundos nombres como "Juan R. Martinez".
+    m = re.match(r'^(.*?)\s*([A-ZÀ-ÿ]\.\s*[A-Za-zÀ-ÿ]+)$', s)
     if m:
-        return m.group(1).strip()
-    
-    # Simpler: take everything before the first short name pattern
-    # A short name is like "C. Tevez" or "J. Riquelme"  
-    m = re.match(r'^(.+?)\s+[A-Z]\.\s*[A-Z][a-z]+', raw)
-    if m:
-        return m.group(1).strip()
-    
-    return raw.strip()
+        full = m.group(1).strip()
+        short_surname = m.group(2).split('.', 1)[1].strip()
+        if len(full) >= 3:
+            last = full.split()[-1].lower()
+            if last == short_surname.lower() or short_surname.lower() in full.lower():
+                return full
+
+    # Patron 2: duplicacion exacta del nombre completo ("IarleyIarley",
+    # "Pol FernandezPol Fernandez", "BaianoBaiano").
+    for split in range(len(s) // 2, 2, -1):
+        if s[:split] == s[split:2 * split]:
+            return s[:split]
+
+    return s
 
 
 # Test the cleaning
@@ -67,6 +75,20 @@ def fix_encoding(name):
         return name.strip()
 
 combined['nombre'] = combined['nombre'].apply(fix_encoding)
+
+# ============================================================
+# CORRECCION DE POSICIONES (errores conocidos de la fuente)
+# ============================================================
+CORRECCIONES_POSICION = {
+    'Cristian Pavón': 'Right Winger',
+}
+mask_pos = combined['nombre'].isin(CORRECCIONES_POSICION)
+n_pos = mask_pos.sum()
+combined.loc[mask_pos, 'posicion'] = combined.loc[mask_pos, 'nombre'].map(CORRECCIONES_POSICION)
+if n_pos:
+    print(f'\nPosiciones corregidas ({n_pos} registros):')
+    for k, v in CORRECCIONES_POSICION.items():
+        print(f'  {k}: -> {v}')
 
 # ============================================================
 # CORRECCIÓN 1: Rating original de la API (NO recalcular)
