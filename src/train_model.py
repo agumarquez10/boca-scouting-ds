@@ -35,7 +35,6 @@ warnings.filterwarnings('ignore')
 # experiencia == temporadas_en_dataset).
 # ============================================================
 BASE_FEATURES = [
-    'pases_precisos',
     'edad',
     'temporadas_en_dataset',
     'partidos_por_temporada',
