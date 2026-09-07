@@ -21,7 +21,7 @@ import pandas as pd
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 
-from rutas import dir_datos
+from rutas import dir_datos, dir_secrets
 
 DATA_DIR = dir_datos()
 TOP_N = 5
@@ -123,7 +123,7 @@ def main():
 
 def publicar_tweet(texto):
     from dotenv import load_dotenv
-    load_dotenv(os.path.join(SCRIPT_DIR, '..', 'secrets', '.env'))
+    load_dotenv(os.path.join(dir_secrets(), '.env'))
     api_key = os.getenv('TWITTER_API_KEY')
     api_secret = os.getenv('TWITTER_API_SECRET')
     access_token = os.getenv('TWITTER_ACCESS_TOKEN')

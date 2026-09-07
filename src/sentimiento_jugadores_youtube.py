@@ -15,8 +15,9 @@ sys.path.insert(0, SCRIPT_DIR)
 from dotenv import load_dotenv
 
 from nlp_engine import SentimientoEngine
+from rutas import dir_secrets
 
-load_dotenv(os.path.join(SCRIPT_DIR, '..', 'secrets', '.env'))
+load_dotenv(os.path.join(dir_secrets(), '.env'))
 
 YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY', '')
 MAX_VIDEOS_POR_JUGADOR = 3

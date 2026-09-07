@@ -1,6 +1,6 @@
 import os
 
-_MARCA_RAIZ = 'AGENTS.md'
+_MARCA_RAIZ = 'README.md'
 
 
 def raiz_repo(partida=None):
@@ -8,6 +8,7 @@ def raiz_repo(partida=None):
 
     Independiente del directorio de trabajo: los notebooks se ejecutan desde
     cualquier carpeta y siempre resuelven data/outputs/models/secrets del repo.
+    Se ancla en README.md (archivo estable y publicable, a diferencia de AGENTS.md).
     """
     actual = os.path.abspath(partida or os.getcwd())
     while os.path.dirname(actual) != actual:
@@ -15,6 +16,10 @@ def raiz_repo(partida=None):
             return actual
         actual = os.path.dirname(actual)
     raise RuntimeError(f'raiz del repo no encontrada (falta {_MARCA_RAIZ} hacia arriba)')
+
+
+def dir_raiz():
+    return raiz_repo()
 
 
 def dir_src():

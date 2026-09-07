@@ -102,7 +102,8 @@ def publicar_tweet(texto):
 
 def main():
     from dotenv import load_dotenv
-    load_dotenv(os.path.join(SCRIPT_DIR, '..', 'secrets', '.env'))
+    from rutas import dir_secrets
+    load_dotenv(os.path.join(dir_secrets(), '.env'))
 
     print('== Paso 1: ranking de candidatos ==')
     correr_scouting()
