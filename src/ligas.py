@@ -36,34 +36,6 @@ LIGAS_FOTMOB = [
         'skip': False,
         'razon_skip': '',
     },
-    {
-        'nombre': 'Turquia',
-        'fotmob_id': 71,
-        'temporadas_totw': ['2024/2025'],
-        'skip': True,
-        'razon_skip': 'Fuera de mercado: se buscan candidatos solo de ligas de America.',
-    },
-    {
-        'nombre': 'Espana - LaLiga',
-        'fotmob_id': 87,
-        'temporadas_totw': ['2024/2025'],
-        'skip': True,
-        'razon_skip': 'Fuera de mercado por costos: Boca no puede competir por jugadores de LaLiga.',
-    },
-    {
-        'nombre': 'Espana - Segunda (LaLiga2)',
-        'fotmob_id': 140,
-        'temporadas_totw': ['2024/2025'],
-        'skip': True,
-        'razon_skip': 'Fuera de mercado por costos: la liga queda fuera por criterio de mercado.',
-    },
-    {
-        'nombre': 'Uruguay',
-        'fotmob_id': 161,
-        'temporadas_totw': ['2024', '2025'],
-        'skip': True,
-        'razon_skip': 'FotMob no publica Team of the Week para esta liga.',
-    },
 ]
 
 
