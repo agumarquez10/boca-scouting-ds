@@ -194,17 +194,21 @@ df_exp['perfil_ofensivo'] = (df_exp['posicion'].isin([
 df_exp['partidos_por_temporada'] = df_exp['partidos'] / df_exp['experiencia'].replace(0, 1)
 
 # ============================================================
-# CORRECCIÓN 4: Guardar dataset de features SIN rating
-# Solo features que NO son derivadas del rating
+# CORRECCIÓN 4: Guardar dataset de features SIN rating ni leakage
+# Se excluyen:
+#   - rating (prohibido por regla del proyecto)
+#   - goles, asistencias y derivados (goles_por_partido,
+#     contribucion_gol, promedio_*_por_temporada, proporcion_goles):
+#     la etiqueta usa (goles+asistencias>=3), asi que estas columnas
+#     serian copia directa del umbral (leakage indirecto).
+#   - experiencia (== temporadas_en_dataset, colinealidad perfecta)
 # ============================================================
 feature_cols = ['nombre', 'temporada', 'posicion', 'edad', 'partidos',
-                'goles', 'asistencias', 'pases_precisos',
+                'pases_precisos',
                 'etiqueta',  # target
-                'goles_por_partido', 'asist_por_partido', 'contribucion_gol',
-                'experiencia', 'edad_primer_registro', 'primera_temporada',
+                'edad_primer_registro', 'primera_temporada',
                 'temporadas_en_dataset',
-                'promedio_goles_por_temporada', 'promedio_asistencias_por_temporada',
-                'proporcion_goles', 'perfil_ofensivo',
+                'perfil_ofensivo',
                 'partidos_por_temporada']
 df_exp = df_exp[feature_cols].copy()
 

@@ -124,6 +124,13 @@ def entrenar_modelo_principal(X_train, X_test, y_train, y_test, features, df, te
 
 
 def guardar_scouting(df, features, test_mask, oof, y_prob):
+    # goles/asistencias ya no viven en el CSV de features (se removieron por
+    # leakage). Se traen del raw etiquetado para el reporte historico.
+    raw = pd.read_csv(os.path.join(DATA_DIR, 'adn_boca_real.csv'), encoding='utf-8-sig')
+    extra = raw[['nombre', 'temporada', 'goles', 'asistencias']].drop_duplicates(
+        subset=['nombre', 'temporada'])
+    df = df.merge(extra, on=['nombre', 'temporada'], how='left')
+
     resultado = df[['nombre', 'temporada', 'posicion', 'edad', 'partidos',
                     'goles', 'asistencias', 'etiqueta']].copy()
     resultado['probabilidad'] = 0.0
