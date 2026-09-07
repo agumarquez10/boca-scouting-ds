@@ -17,8 +17,14 @@ print(f'Historical (2000-2009): {len(df_hist)} records')
 # Fix names that have shortname concatenated
 # Patterns observed in source data:
 #   "Carlos TevezC. Tevez"        -> full name + shortname pegado
+#   "G. Barros SchelottoG. Barros" -> apellidos pegados al nombre completo
 #   "IarleyIarley"                -> nombre duplicado exacto
 #   "Pol FernandezPol Fernandez"  -> nombre y apellido duplicados exactos
+# Solo cortamos si TODAS las palabras del shortname ya estan dentro del
+# nombre completo, para no romper segundos nombres legitimos como "Juan R."
+SHORTNAME_RE = re.compile(r'^(.*?)\s*([A-ZÀ-ÿ]\.\s*[A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)*)$')
+
+
 def clean_name(raw):
     if not isinstance(raw, str):
         return raw
@@ -26,17 +32,15 @@ def clean_name(raw):
     if not s:
         return s
 
-    # Patron 1: "Nombre CompletoX. Apellido" (shortname pegado al final).
-    # Solo cortamos si el apellido del shortname coincide con el apellido real,
-    # para no romper segundos nombres como "Juan R. Martinez".
-    m = re.match(r'^(.*?)\s*([A-ZÀ-ÿ]\.\s*[A-Za-zÀ-ÿ]+)$', s)
+    # Patron 1: shortname pegado al final: "Nombre CompletoX. Apellido Ap2"
+    m = SHORTNAME_RE.match(s)
     if m:
         full = m.group(1).strip()
         short_surname = m.group(2).split('.', 1)[1].strip()
-        if len(full) >= 3:
-            last = full.split()[-1].lower()
-            if last == short_surname.lower() or short_surname.lower() in full.lower():
-                return full
+        short_words = short_surname.split()
+        words_full = set(full.lower().split())
+        if len(full) >= 3 and short_words and all(w.lower() in words_full for w in short_words):
+            return full
 
     # Patron 2: duplicacion exacta del nombre completo ("IarleyIarley",
     # "Pol FernandezPol Fernandez", "BaianoBaiano").
@@ -67,11 +71,17 @@ print(f'\nDuplicates between datasets: {dupes.sum()}')
 # Keep the modern version (more reliable) where there's overlap
 combined = combined[~dupes].copy()
 
-# Clean encoding issues by encoding to latin-1 and decoding from utf-8
+# Clean encoding issues. Los datos vienen con doble-encoding (mojibake):
+# el string actual es texto latin-1 que fue mal decodificado.
+# Probamos revertir de forma segura y no rompemos si ya esta bien.
 def fix_encoding(name):
+    if not isinstance(name, str):
+        return name
     try:
-        return name.encode('latin-1').decode('utf-8').strip()
-    except:
+        fixed = name.encode('latin-1').decode('utf-8').strip()
+        # solo aceptamos si no se introdujeron caracteres de reemplazo
+        return fixed if '\ufffd' not in fixed else name.strip()
+    except (UnicodeDecodeError, UnicodeEncodeError):
         return name.strip()
 
 combined['nombre'] = combined['nombre'].apply(fix_encoding)
