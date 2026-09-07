@@ -9,10 +9,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.preprocessing import StandardScaler
+from sklearn.tree import DecisionTreeClassifier
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from posiciones import PositionEncoder
@@ -53,6 +55,10 @@ RANDOM_STATE = 42
 def cargar_datos():
     df = pd.read_csv(os.path.join(DATA_DIR, 'adn_boca_real_features.csv'), encoding='utf-8-sig')
     df = df.dropna(subset=BASE_FEATURES + ['posicion'])
+    # Excluir arqueros: no aportan info para predecir ADN Boca (perfil de cancha)
+    antes = len(df)
+    df = df[df['posicion'] != 'Goalkeeper'].copy()
+    print(f'Excluidos {antes - len(df)} registros de arqueros (Goalkeeper)')
     return df
 
 
@@ -164,6 +170,36 @@ def entrenar_modelo_l1(X_train, X_test, y_train, y_test):
     return modelo
 
 
+def entrenar_modelo_arbol(X_train, X_test, y_train, y_test):
+    print('\n=== MODELO ALTERNATIVO: Arbol de decision (class_weight balanced) ===')
+    param_grid = {'max_depth': [3, 4, 5, 6], 'min_samples_leaf': [5, 10, 20]}
+    dt = DecisionTreeClassifier(class_weight='balanced', random_state=RANDOM_STATE,
+                                max_features='sqrt')
+    grid = GridSearchCV(dt, param_grid, cv=5, scoring='roc_auc')
+    grid.fit(X_train, y_train)
+    modelo = grid.best_estimator_
+    y_pred = modelo.predict(X_test)
+    y_prob = modelo.predict_proba(X_test)[:, 1]
+    print(f'Mejor params: {grid.best_params_} | AUC test: {roc_auc_score(y_test, y_prob):.3f}')
+    print(classification_report(y_test, y_pred, target_names=['No encaja', 'ADN Boca']))
+    return modelo
+
+
+def entrenar_modelo_bosque(X_train, X_test, y_train, y_test):
+    print('\n=== MODELO ALTERNATIVO: Random Forest (class_weight balanced) ===')
+    param_grid = {'n_estimators': [200], 'max_depth': [4, 6, 8], 'min_samples_leaf': [5, 10]}
+    rf = RandomForestClassifier(class_weight='balanced', random_state=RANDOM_STATE,
+                                max_features='sqrt', n_jobs=-1)
+    grid = GridSearchCV(rf, param_grid, cv=5, scoring='roc_auc')
+    grid.fit(X_train, y_train)
+    modelo = grid.best_estimator_
+    y_pred = modelo.predict(X_test)
+    y_prob = modelo.predict_proba(X_test)[:, 1]
+    print(f'Mejor params: {grid.best_params_} | AUC test: {roc_auc_score(y_test, y_prob):.3f}')
+    print(classification_report(y_test, y_pred, target_names=['No encaja', 'ADN Boca']))
+    return modelo
+
+
 def main():
     df = cargar_datos()
     encoder = PositionEncoder(POS_COLUMNS)
@@ -185,17 +221,22 @@ def main():
     guardar_scouting(df, features, test_mask, oof, y_prob)
 
     modelo_l1 = entrenar_modelo_l1(X_train, X_test, y_train, y_test)
+    modelo_arbol = entrenar_modelo_arbol(X_train, X_test, y_train, y_test)
+    modelo_bosque = entrenar_modelo_bosque(X_train, X_test, y_train, y_test)
 
     joblib.dump(modelo, os.path.join(MODEL_DIR, 'modelo_adn_boca.pkl'))
     joblib.dump(scaler, os.path.join(MODEL_DIR, 'scaler.pkl'))
     joblib.dump(features, os.path.join(MODEL_DIR, 'features_list.pkl'))
     joblib.dump(encoder, os.path.join(MODEL_DIR, 'position_encoder.pkl'))
     joblib.dump(modelo_l1, os.path.join(MODEL_DIR, 'modelo_logistic_l1.pkl'))
+    joblib.dump(modelo_arbol, os.path.join(MODEL_DIR, 'modelo_arbol.pkl'))
+    joblib.dump(modelo_bosque, os.path.join(MODEL_DIR, 'modelo_bosque.pkl'))
     joblib.dump({'features': BASE_FEATURES, 'pos_columns': POS_COLUMNS},
                 os.path.join(MODEL_DIR, 'config.pkl'))
 
     for f in ['modelo_adn_boca.pkl', 'scaler.pkl', 'features_list.pkl',
-              'position_encoder.pkl', 'modelo_logistic_l1.pkl', 'config.pkl']:
+              'position_encoder.pkl', 'modelo_logistic_l1.pkl', 'modelo_arbol.pkl',
+              'modelo_bosque.pkl', 'config.pkl']:
         print(f'  models/{f} guardado')
     print(f'AUC-ROC test: {auc:.3f}')
 

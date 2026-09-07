@@ -130,6 +130,28 @@ combined['etiqueta'] = (
     (combined['contribucion_ofensiva'] >= 3)
 ).astype(int)
 
+# ============================================================
+# CORRECCIÓN 5: Etiqueta manual del jugador (juicio humano)
+# Si etiquetas_manuales.csv tiene un valor para el jugador, esa
+# etiqueta TIENE PRIORIDAD sobre la fórmula (aplica a todas sus
+# temporadas). Celda vacía = coincidís con la fórmula.
+# ============================================================
+etq_path = os.path.join(DATA_DIR, 'etiquetas_manuales.csv')
+if os.path.exists(etq_path):
+    manual = pd.read_csv(etq_path, encoding='utf-8-sig')
+    manual = manual.dropna(subset=['etiqueta_manual'])
+    manual = manual.assign(etiqueta_manual=manual['etiqueta_manual'].astype(int))
+    override = manual.set_index('jugador')['etiqueta_manual']
+    mapeado = combined['nombre'].map(override)
+    n_flips = mapeado.notna().sum()
+    if n_flips > 0:
+        combined['etiqueta'] = mapeado.fillna(combined['etiqueta']).astype(int)
+        print(f'\nEtiqueta manual aplicada a {n_flips} registros ({manual["jugador"].nunique()} jugadores)')
+    else:
+        print('\netiquetas_manuales.csv leido pero sin valores en etiqueta_manual')
+else:
+    print('\netiquetas_manuales.csv no encontrado, se usa solo la fórmula')
+
 print(f'\nEtiqueta distribution (nueva definición):')
 print(combined['etiqueta'].value_counts().to_string())
 
