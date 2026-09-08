@@ -117,24 +117,17 @@ else:
     print(f"\n[OK] Rating original preserved (range: {combined['rating'].min():.1f} - {combined['rating'].max():.1f})")
 
 # ============================================================
-# CORRECCIÓN 2: Etiqueta más robusta
-# Definición: jugador con buen rendimiento整体 Y contribución ofensiva clara
-# Usamos el rating original + goles+asistencias como proxy
+# CORRECCIÓN 2: Etiqueta definitiva (manual, NO formula)
+# La etiqueta ya viene de las fuentes (criterio histórico validado por
+# el usuario). No se recalcula con ninguna formula: el juicio humano
+# se aplica en CORRECCIÓN 5 con prioridad.
 # ============================================================
-combined['contribucion_ofensiva'] = combined['goles'] + combined['asistencias']
-
-# Definición robusta: rating >= 7.0 Y al menos 3 goles+asistencias en la temporada
-# (más exigente que >2 para reducir falsos positivos)
-combined['etiqueta'] = (
-    (combined['rating'] >= 7.0) & 
-    (combined['contribucion_ofensiva'] >= 3)
-).astype(int)
 
 # ============================================================
 # CORRECCIÓN 5: Etiqueta manual del jugador (juicio humano)
 # Si etiquetas_manuales.csv tiene un valor para el jugador, esa
-# etiqueta TIENE PRIORIDAD sobre la fórmula (aplica a todas sus
-# temporadas). Celda vacía = coincidís con la fórmula.
+# etiqueta TIENE PRIORIDAD sobre la que viene de la fuente (aplica
+# a todas sus temporadas). Celda vacía = se mantiene la etiqueta actual.
 # ============================================================
 etq_path = os.path.join(DATA_DIR, 'etiquetas_manuales.csv')
 if os.path.exists(etq_path):
@@ -150,15 +143,16 @@ if os.path.exists(etq_path):
     else:
         print('\netiquetas_manuales.csv leido pero sin valores en etiqueta_manual')
 else:
-    print('\netiquetas_manuales.csv no encontrado, se usa solo la fórmula')
+    print('\netiquetas_manuales.csv no encontrado, se conserva la etiqueta de las fuentes')
 
-print(f'\nEtiqueta distribution (nueva definición):')
+print(f'\nEtiqueta distribution (definitiva):')
 print(combined['etiqueta'].value_counts().to_string())
 
 # Sort
 combined = combined.sort_values(['temporada', 'rating'], ascending=[False, False]).reset_index(drop=True)
 
-# Select final columns (SIN rating en features para evitar leakage)
+# Select final columns (se conserva rating en el dataset crudo para
+# EDA/auditoría, pero NO entra a las features del modelo)
 final_cols = ['nombre', 'temporada', 'posicion', 'edad', 'partidos',
               'goles', 'asistencias', 'pases_precisos', 'rating', 'etiqueta']
 combined = combined[final_cols].copy()
@@ -226,16 +220,17 @@ df_exp['perfil_ofensivo'] = (df_exp['posicion'].isin([
 df_exp['partidos_por_temporada'] = df_exp['partidos'] / df_exp['experiencia'].replace(0, 1)
 
 # ============================================================
-# CORRECCIÓN 4: Guardar dataset de features SIN rating ni leakage
-# Se excluyen:
-#   - rating (prohibido por regla del proyecto)
-#   - goles, asistencias y derivados (goles_por_partido,
-#     contribucion_gol, promedio_*_por_temporada, proporcion_goles):
-#     la etiqueta usa (goles+asistencias>=3), asi que estas columnas
-#     serian copia directa del umbral (leakage indirecto).
-#   - experiencia (== temporadas_en_dataset, colinealidad perfecta)
+# CORRECCIÓN 4: Guardar dataset de features
+# La etiqueta es manual (CORRECCIÓN 2/5), así que goles/asistencias
+# ya no son copia del umbral: son features válidas del modelo y
+# están disponibles para los candidatos de mercado (FotMob).
+# Se conserva rating en el dataset crudo (EDA/auditoría) pero se
+# EXCLUYE de las features: no hay rating API-Football con el que
+# inferir para los candidatos de mercado.
+# Se excluye experiencia (== temporadas_en_dataset, colinealidad perfecta).
 # ============================================================
 feature_cols = ['nombre', 'temporada', 'posicion', 'edad', 'partidos',
+                'goles', 'asistencias',
                 'pases_precisos',
                 'etiqueta',  # target
                 'edad_primer_registro', 'primera_temporada',

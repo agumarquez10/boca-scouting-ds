@@ -29,11 +29,12 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 warnings.filterwarnings('ignore')
 
 # ============================================================
-# Features FINALES: perfil puro, SIN reconstruccion del label.
-# La etiqueta se define (rating>=7.0) & (goles+asistencias>=3);
-# por eso NO se usan goles, asistencias, goles_por_partido,
-# contribucion_gol ni derivados: serian copia directa del umbral.
-# Tampoco se usan pares con |r|>0.8 (edad vs edad_primer_registro;
+# Features FINALES: perfil + producción ofensiva.
+# La etiqueta es manual (criterio del usuario, sin fórmula), así
+# que goles/asistencias son features válidas y están disponibles
+# para los candidatos de mercado (FotMob). Se excluye rating: no
+# existe un rating API-Football para inferir en el mercado. Tampoco
+# se usan pares con |r|>0.8 (edad vs edad_primer_registro;
 # experiencia == temporadas_en_dataset).
 # ============================================================
 BASE_FEATURES = [
@@ -42,6 +43,8 @@ BASE_FEATURES = [
     'temporadas_en_dataset',
     'partidos_por_temporada',
     'perfil_ofensivo',
+    'goles',
+    'asistencias',
 ]
 
 GRUPOS = ['Defensor_central', 'Delantero', 'Extremo', 'Lateral',
@@ -130,13 +133,8 @@ def entrenar_modelo_principal(X_train, X_test, y_train, y_test, features, df, te
 
 
 def guardar_scouting(df, features, test_mask, oof, y_prob):
-    # goles/asistencias ya no viven en el CSV de features (se removieron por
-    # leakage). Se traen del raw etiquetado para el reporte historico.
-    raw = pd.read_csv(os.path.join(DATA_DIR, 'adn_boca_real.csv'), encoding='utf-8-sig')
-    extra = raw[['nombre', 'temporada', 'goles', 'asistencias']].drop_duplicates(
-        subset=['nombre', 'temporada'])
-    df = df.merge(extra, on=['nombre', 'temporada'], how='left')
-
+    # goles/asistencias vienen del CSV de features (df); ya no hace falta
+    # mergear contra el raw etiquetado.
     resultado = df[['nombre', 'temporada', 'posicion', 'edad', 'partidos',
                     'goles', 'asistencias', 'etiqueta']].copy()
     resultado['probabilidad'] = 0.0
