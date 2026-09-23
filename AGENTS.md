@@ -16,52 +16,63 @@ resultados dudosos antes de darlos por buenos. Respondés en español.
 Sistema de DS para identificar fichajes con "ADN Boca" y medir el sentimiento de la hinchada.
 - Stack: Python (pandas, numpy, scikit-learn, matplotlib, seaborn, joblib), SQLite, API Football API-Sports v3.
 - Objetivo: ranking semanal de candidatos + tweet con top 5.
-- Estado real: modelo entrenado y scouting histórico listos; faltan NLP/sentimiento,
-  scoring de candidatos del mercado, automatización semanal + tweet, y reparar la
-  desincronización de esquemas.
+- Estado real: modelo vigente entrenado y sincronizado (esquema 9 features, CV/OOF por
+  jugador con GroupKFold); EDA y notebooks de modelo al día (re-ejecutados, 0 errores).
+  Faltan: el pipeline de scoring de candidatos del mercado (src/scouting_pipeline.py
+  no existe), NLP/sentimiento real y la automatización semanal + tweet.
 
 ## Datos (fuente de verdad)
-- data/adn_boca_real_features.csv → features principal (795 × 21). NO tiene rating (evita leakage).
+- data/adn_boca_real_features.csv → features principal (795 × 14). NO tiene rating (evita leakage).
 - data/adn_boca_real.csv → raw etiquetado (con rating).
 - data/scouting_resultado.csv → salida del ranking.
+- data/scouting_resultado_historico.csv → predicciones del modelo (OOF en train, test directo; 729 filas).
 - data/boca_juniors.db → adn_boca, jugadores_entrenamiento, candidatos_mercado (180 jugadores), plantilla (vacía).
-- models/*.pkl → modelo_adn_boca.pkl, modelo_logistic_l1.pkl, scaler.pkl, features_list.pkl, agrupar_posicion.pkl, label_encoder.pkl.
+- models/*.pkl → modelo_adn_boca.pkl, modelo_logistic_l1.pkl, modelo_bosque.pkl, scaler.pkl,
+  features_list.pkl, config.pkl, position_encoder.pkl.
 - src/merge_datasets.py → pipeline de datos. outputs/*.png → figuras.
 
 ⚠️ Esquema NUEVO (real_features): contribucion_gol, edad_primer_registro, primera_temporada,
 temporadas_en_dataset. NO usar participacion_gol, pases_norm, rendimiento, edad_estimada_debut
-(esquema viejo de notebooks sin re-ejecutar).
+(esquema viejo de notebooks). El modelo vigente usa 9 features: goles, asistencias, edad
++ dummies de posición (esquema decidido por experimento AUPRC).
 
 ## Comandos
-- No hay scripts de test. Ejecutar notebooks con kernel Python 3 (anaconda base).
+- Tests: `python -m pytest tests -q` (8 tests de reglas de DS).
+- Ejecutar notebooks con kernel Python 3.12 (python312, el único con nbclient + seaborn).
 - Regenerar datos: `python src/merge_datasets.py` desde la raíz.
 - Validar cambios: re-ejecutar la celda/notebook afectado y comparar outputs.
 
 ## Reglas de Data Science (obligatorias)
-1. La etiqueta se define con rating (>=7.0 y goles+asistencias>=3). NUNCA usar rating ni
-   derivadas del rating como feature. Verificar features_list.pkl.
+1. La etiqueta es criterio MANUAL del usuario (prioridad a `data/etiquetas_manuales.csv`),
+   NO la fórmula histórica `(rating>=7.0 & goles+asist>=3)`. NUNCA usar rating ni derivadas
+   del rating como feature. Verificar features_list.pkl.
 2. Split por jugador, no por fila (un jugador no puede estar en train y test).
-   Usar el patrón de model_training.ipynb (última_temporada >= 2023 → test).
-3. Desbalance ~4.2:1: class_weight='balanced' o SMOTE; reportar precision/recall/F1 por clase
-   y AUC-ROC, nunca solo accuracy.
+   CV y OOF también por jugador (GroupKFold): sin agrupar, el OOF se infla ~+0.03.
+   Test = última temporada >= 2023.
+3. Desbalance ~2.4:1: class_weight='balanced' o SMOTE; reportar precision/recall/F1 por clase,
+   AUC-ROC y AUPRC (para ranking), nunca solo accuracy.
 4. Los outliers (goles/asistencias) son leyendas (Riquelme, Palacio). NO se eliminan.
-5. Eliminar features con |r|>0.8 (goles↔goles_por_partido, goles_por_partido↔contribucion_gol).
-6. La inferencia SIEMPRE usa los pkl (modelo+scaler+features), nunca recalcula.
+5. Eliminar features con |r|>0.8 entre sí (en el dataset actual no hay pares: goles/asistencias
+   son features legítimas del esquema 9).
+6. La inferencia SIEMPRE usa los pkl (modelo+scaler+features+config+encoder), nunca recalcula.
 7. sklearn: penalty='l1' requiere solver='saga' y sin l1_ratio (es solo de elasticnet). Sin warnings.
 
 ## Deudas técnicas conocidas (prioridad alta)
-1. model_agente_training.ipynb y model_hibrid.ipynb usan columnas del esquema viejo
-   (participacion_gol, pases_norm) → KeyError con el CSV actual.
-2. L1 nunca se aplicó (l1_ratio=1 sin penalty='elasticnet').
-3. eda.ipynb: outputs desincronizados; celdas 28–30 (sección 8.5) sin ejecutar.
+1. (resuelto) Notebooks de modelo: re-ejecutados con esquema 9 (sin arqueros, 729 filas).
+2. (resuelto) L1 corregida: penalty='l1' + solver='saga' en train_model.py.
+3. (resuelto) eda.ipynb: re-ejecutado completo (39 celdas, 0 errores).
+4. src/scouting_pipeline.py NO existe (README lo referencia; queda un __pycache__ huérfano).
+   Es la deuda principal: el pipeline de scouting está por construir.
 
 ## Completar el proyecto (orden sugerido)
-1. Re-ejecutar EDA con el esquema nuevo (incl. celdas 28–30).
-2. Unificar esquema en los notebooks de modelo y corregir L1.
-3. Pipeline de scouting: aplicar modelo a candidatos_mercado → ranking → scouting_resultado.csv.
+1. (hecho) Re-ejecutar EDA con el esquema nuevo (incl. celdas 28–30).
+2. (hecho) Unificar esquema en los notebooks de modelo (9 features) y corregir L1.
+3. Pipeline de scouting: crear src/scouting_pipeline.py (aplicar modelo a candidatos_mercado
+   → ranking → scouting_resultado.csv). Solucionar primero el cacheo de goles/asistencias
+   de candidatos (hoy 0/None en FotMob): son features del esquema 9.
 4. NLP: sentimiento de la hinchada (placeholders Reddit en .env).
 5. Automatización semanal + publicación de tweet top-5.
-6. Documentar README y agregar tests mínimos.
+6. Tests mínimos ya en pytest (8 reglas); documentar README al resto de cambios.
 
 ## Límites
 - ✅ Editar notebooks/.py, regenerar CSVs desde merge_datasets.py, reentrenar y guardar en models/

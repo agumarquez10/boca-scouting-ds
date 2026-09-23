@@ -14,7 +14,7 @@ RAIZ = os.path.dirname(os.path.abspath(__file__)) + os.sep + '..'
 DATA_DIR = os.path.join(RAIZ, 'data')
 MODEL_DIR = os.path.join(RAIZ, 'models')
 
-COLUMNAS_PROHIBIDAS = {'rating', 'goles', 'asistencias', 'goles_por_partido',
+COLUMNAS_PROHIBIDAS = {'rating', 'goles_por_partido',
                        'asist_por_partido', 'contribucion_gol', 'pases_norm',
                        'rendimiento', 'experiencia', 'edad_estimada_debut'}
 
@@ -26,12 +26,12 @@ def test_rating_y_derivados_no_son_features():
     assert not infiltrados, f'features con leakage: {infiltrados}'
 
 
-def test_etiqueta_definida_con_rating_no_como_feature():
+def test_etiqueta_manual_y_rating_fuera_del_modelo():
     df = cargar_datos()
     assert 'rating' not in df.columns
     raw = pd.read_csv(os.path.join(DATA_DIR, 'adn_boca_real.csv'), encoding='utf-8-sig')
-    esperada = ((raw['rating'] >= 7.0) & (raw['goles'] + raw['asistencias'] >= 3)).astype(int)
-    assert (raw['etiqueta'] == esperada).all()
+    formula = ((raw['rating'] >= 7.0) & (raw['goles'] + raw['asistencias'] >= 3)).astype(int)
+    assert not (raw['etiqueta'] == formula).all(), 'la etiqueta volvio a ser la formula'
     for col in COLUMNAS_PROHIBIDAS:
         assert col not in BASE_FEATURES
 
@@ -62,8 +62,7 @@ def test_pkls_cargables_y_prediccion_valida():
     scaler = joblib.load(os.path.join(MODEL_DIR, 'scaler.pkl'))
     encoder = joblib.load(os.path.join(MODEL_DIR, 'position_encoder.pkl'))
 
-    fila = {'pases_precisos': 75, 'edad': 23, 'temporadas_en_dataset': 3,
-            'partidos_por_temporada': 30, 'perfil_ofensivo': 1}
+    fila = {'goles': 8, 'asistencias': 4, 'edad': 23}
     X_base = pd.DataFrame([fila])
     X_pos = encoder.transform(pd.Series(['Attacker']))
     X = pd.concat([X_base, X_pos], axis=1).reindex(

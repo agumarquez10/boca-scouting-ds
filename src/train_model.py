@@ -12,7 +12,7 @@ import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
-from sklearn.model_selection import GridSearchCV, StratifiedKFold
+from sklearn.model_selection import GridSearchCV, GroupKFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 
@@ -29,23 +29,15 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 warnings.filterwarnings('ignore')
 
 # ============================================================
-# Features FINALES: perfil + producción ofensiva.
-# La etiqueta es manual (criterio del usuario, sin fórmula), así
-# que goles/asistencias son features válidas y están disponibles
-# para los candidatos de mercado (FotMob). Se excluye rating: no
-# existe un rating API-Football para inferir en el mercado. Tampoco
-# se usan pares con |r|>0.8 (edad vs edad_primer_registro;
-# experiencia == temporadas_en_dataset).
+# Features del modelo (esquema 9, decidido por experimento AUPRC):
+# goles, asistencias, edad + dummies de posicion. El resto de las
+# variables numericas (pases, continuidad, rol) resultaron ruido:
+# la L1 los reduce a 0 y el RF de 9 features iguala o supera al de
+# 13. La etiqueta es manual (sin formula), asi que goles/asistencias
+# son features validas. rating queda fuera: no hay rating
+# API-Football para inferir en el mercado.
 # ============================================================
-BASE_FEATURES = [
-    'pases_precisos',
-    'edad',
-    'temporadas_en_dataset',
-    'partidos_por_temporada',
-    'perfil_ofensivo',
-    'goles',
-    'asistencias',
-]
+BASE_FEATURES = ['goles', 'asistencias', 'edad']
 
 GRUPOS = ['Defensor_central', 'Delantero', 'Extremo', 'Lateral',
           'Mediocampista_central', 'Mediocampista_ofensivo']
@@ -78,15 +70,15 @@ def split_por_jugador(df):
     return test_mask
 
 
-def entrenar_modelo_principal(X_train, X_test, y_train, y_test, features, df, test_mask):
+def entrenar_modelo_principal(X_train, X_test, y_train, y_test, features, df, test_mask, grupos):
     scaler = StandardScaler().fit(X_train)
     X_train_scaled = scaler.transform(X_train)
     X_test_scaled = scaler.transform(X_test)
 
     param_grid = {'C': [0.01, 0.1, 1, 10, 100]}
     lr = LogisticRegression(class_weight='balanced', max_iter=2000, random_state=RANDOM_STATE)
-    grid = GridSearchCV(lr, param_grid, cv=5, scoring='roc_auc')
-    grid.fit(X_train_scaled, y_train)
+    grid = GridSearchCV(lr, param_grid, cv=GroupKFold(n_splits=5), scoring='roc_auc')
+    grid.fit(X_train_scaled, y_train, groups=grupos)
     modelo = grid.best_estimator_
 
     y_pred = modelo.predict(X_test_scaled)
@@ -120,14 +112,14 @@ def entrenar_modelo_principal(X_train, X_test, y_train, y_test, features, df, te
     plt.savefig(os.path.join(OUTPUT_DIR, '21_coeficientes_modelo.png'), dpi=150, bbox_inches='tight')
     plt.close(fig)
 
-    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
+    gkf = GroupKFold(n_splits=5)
     oof = np.zeros(len(X_train))
-    for train_idx, val_idx in skf.split(X_train_scaled, y_train):
+    for train_idx, val_idx in gkf.split(X_train_scaled, y_train, groups=grupos):
         lr_fold = LogisticRegression(class_weight='balanced', C=modelo.C,
                                      max_iter=2000, random_state=RANDOM_STATE)
         lr_fold.fit(X_train_scaled[train_idx], y_train.iloc[train_idx])
         oof[val_idx] = lr_fold.predict_proba(X_train_scaled[val_idx])[:, 1]
-    print(f'OOF AUC: {roc_auc_score(y_train, oof):.3f}')
+    print(f'OOF AUC (GroupKFold por jugador): {roc_auc_score(y_train, oof):.3f}')
 
     return modelo, scaler, y_pred, y_prob, oof, auc
 
@@ -153,13 +145,13 @@ def guardar_scouting(df, features, test_mask, oof, y_prob):
     return resultado
 
 
-def entrenar_modelo_l1(X_train, X_test, y_train, y_test):
+def entrenar_modelo_l1(X_train, X_test, y_train, y_test, grupos):
     print('\n=== MODELO ALTERNATIVO: LogisticRegression L1 (saga) ===')
     param_grid = {'C': [0.01, 0.1, 1, 10]}
     lr = LogisticRegression(penalty='l1', solver='saga', class_weight='balanced',
                             max_iter=3000, random_state=RANDOM_STATE)
-    grid = GridSearchCV(lr, param_grid, cv=5, scoring='roc_auc')
-    grid.fit(X_train, y_train)
+    grid = GridSearchCV(lr, param_grid, cv=GroupKFold(n_splits=5), scoring='roc_auc')
+    grid.fit(X_train, y_train, groups=grupos)
     modelo = grid.best_estimator_
     y_pred = modelo.predict(X_test)
     y_prob = modelo.predict_proba(X_test)[:, 1]
@@ -168,13 +160,13 @@ def entrenar_modelo_l1(X_train, X_test, y_train, y_test):
     return modelo
 
 
-def entrenar_modelo_arbol(X_train, X_test, y_train, y_test):
+def entrenar_modelo_arbol(X_train, X_test, y_train, y_test, grupos):
     print('\n=== MODELO ALTERNATIVO: Arbol de decision (class_weight balanced) ===')
     param_grid = {'max_depth': [3, 4, 5, 6], 'min_samples_leaf': [5, 10, 20]}
     dt = DecisionTreeClassifier(class_weight='balanced', random_state=RANDOM_STATE,
                                 max_features='sqrt')
-    grid = GridSearchCV(dt, param_grid, cv=5, scoring='roc_auc')
-    grid.fit(X_train, y_train)
+    grid = GridSearchCV(dt, param_grid, cv=GroupKFold(n_splits=5), scoring='roc_auc')
+    grid.fit(X_train, y_train, groups=grupos)
     modelo = grid.best_estimator_
     y_pred = modelo.predict(X_test)
     y_prob = modelo.predict_proba(X_test)[:, 1]
@@ -183,13 +175,13 @@ def entrenar_modelo_arbol(X_train, X_test, y_train, y_test):
     return modelo
 
 
-def entrenar_modelo_bosque(X_train, X_test, y_train, y_test):
+def entrenar_modelo_bosque(X_train, X_test, y_train, y_test, grupos):
     print('\n=== MODELO ALTERNATIVO: Random Forest (class_weight balanced) ===')
     param_grid = {'n_estimators': [200], 'max_depth': [4, 6, 8], 'min_samples_leaf': [5, 10]}
     rf = RandomForestClassifier(class_weight='balanced', random_state=RANDOM_STATE,
                                 max_features='sqrt', n_jobs=-1)
-    grid = GridSearchCV(rf, param_grid, cv=5, scoring='roc_auc')
-    grid.fit(X_train, y_train)
+    grid = GridSearchCV(rf, param_grid, cv=GroupKFold(n_splits=5), scoring='roc_auc')
+    grid.fit(X_train, y_train, groups=grupos)
     modelo = grid.best_estimator_
     y_pred = modelo.predict(X_test)
     y_prob = modelo.predict_proba(X_test)[:, 1]
@@ -210,17 +202,18 @@ def main():
 
     X_train, X_test = X[train_mask], X[test_mask]
     y_train, y_test = y[train_mask], y[test_mask]
+    grupos = df['nombre'].values[train_mask]
     print(f'Train: {len(X_train)} registros, {df[train_mask]["nombre"].nunique()} jugadores')
     print(f'Test:  {len(X_test)} registros, {df[test_mask]["nombre"].nunique()} jugadores')
 
     modelo, scaler, y_pred, y_prob, oof, auc = entrenar_modelo_principal(
-        X_train, X_test, y_train, y_test, features, df, test_mask)
+        X_train, X_test, y_train, y_test, features, df, test_mask, grupos)
 
     guardar_scouting(df, features, test_mask, oof, y_prob)
 
-    modelo_l1 = entrenar_modelo_l1(X_train, X_test, y_train, y_test)
-    modelo_arbol = entrenar_modelo_arbol(X_train, X_test, y_train, y_test)
-    modelo_bosque = entrenar_modelo_bosque(X_train, X_test, y_train, y_test)
+    modelo_l1 = entrenar_modelo_l1(X_train, X_test, y_train, y_test, grupos)
+    modelo_arbol = entrenar_modelo_arbol(X_train, X_test, y_train, y_test, grupos)
+    modelo_bosque = entrenar_modelo_bosque(X_train, X_test, y_train, y_test, grupos)
 
     joblib.dump(modelo, os.path.join(MODEL_DIR, 'modelo_adn_boca.pkl'))
     joblib.dump(scaler, os.path.join(MODEL_DIR, 'scaler.pkl'))

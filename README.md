@@ -33,34 +33,39 @@ con kernel Python 3 desde Jupyter (`python -m jupyter notebook`).
 
 ## Reglas de Data Science (obligatorias)
 
-1. **Etiqueta**: `(rating >= 7.0) & (goles + asistencias >= 3)`. `rating` y
-   derivados NUNCA son features.
-2. **Split por jugador** (no por fila): `temporada >= 2023` → test.
-3. Desbalance 4.2:1 → `class_weight='balanced'`; reportar precision/recall/F1 y
-   AUC-ROC, no solo accuracy.
+1. **Etiqueta**: criterio manual del usuario (prioridad a las correcciones de
+   `data/etiquetas_manuales.csv`), no la fórmula histórica. `rating` y derivados
+   NUNCA son features.
+2. **Split por jugador** (no por fila): `temporada >= 2023` → test. CV y OOF
+   también por jugador (GroupKFold): sin GroupKFold el OOF se infla ~+0.03.
+3. Desbalance ~2.4:1 → `class_weight='balanced'`; reportar precision/recall/F1,
+   AUC-ROC y AUPRC (para ranking), no solo accuracy.
 4. Los outliers (goles/asistencias) son leyendas: NO se eliminan.
 5. Sin features con `|r| > 0.8` entre sí.
 6. La inferencia SIEMPRE usa los pkl (`modelo_adn_boca.pkl`, `scaler.pkl`,
    `features_list.pkl`, `position_encoder.pkl`, `config.pkl`), nunca recalcula.
 7. `penalty='l1'` requiere `solver='saga'` (sin `l1_ratio`).
 
-## Features del modelo (perfil puro)
+## Features del modelo (esquema 9)
 
-`pases_precisos`, `edad`, `temporadas_en_dataset`, `partidos_por_temporada`,
-`perfil_ofensivo` + 6 dummies de posición (`position_encoder.pkl`). Son 11
-features; quedan descartados goles/asistencias/rating y pares colineales
-(`edad` vs `edad_primer_registro`, `experiencia` vs `temporadas_en_dataset`).
+`goles`, `asistencias`, `edad` + 6 dummies de posición (`position_encoder.pkl`).
+Son 9 features según el experimento AUPRC: el resto (pases, continuidad, rol)
+es ruido — la L1 los reduce a 0 y el RF de 9 features iguala o supera al de 13.
+CV y OOF por jugador (GroupKFold). `rating` fuera (no hay rating API para el
+mercado; además correlaciona +0.88 con `goles`).
 
-Resultado (LogisticRegression balanceada, C=10): **AUC-ROC test 0.887**,
-OOF 0.930. Alternativas: `modelo_logistic_l1.pkl` (L1, saga, AUC 0.866) y
-`modelo_random_forest.pkl` (RandomForest, AUC 0.881).
+Resultado en test (validación temporal): `modelo_adn_boca.pkl` (Logistic,
+AUC 0.755, OOF 0.872), `modelo_logistic_l1.pkl` (L1 saga, AUC 0.773),
+`modelo_bosque.pkl` (RandomForest, **AUC 0.779**). AUPRC ~0.72–0.74
+(2.2× el azar = prevalencia 0.333) y top-10 10/10 en test: el ranking sirve
+para el top-N semanal.
 
 ## Datos
 
 | Archivo | Descripción |
 |---|---|
-| `data/adn_boca_real.csv` | Raw etiquetado (con rating, 810 filas) |
-| `data/adn_boca_real_features.csv` | Features sin rating (fuente de entrenamiento) |
+| `data/adn_boca_real.csv` | Raw etiquetado (con rating, 795 filas) |
+| `data/adn_boca_real_features.csv` | Features sin rating (795×14, fuente de entrenamiento) |
 | `data/scouting_resultado_historico.csv` | Predicciones del modelo (OOF en train, test directo) |
 | `data/scouting_resultado.csv` | **Ranking semanal de candidatos** (salida del pipeline) |
 | `data/sentimiento_hinchada.csv` | Comentarios + VADER compound + clasificación |
@@ -71,7 +76,7 @@ Credenciales en `secrets/.env` (no versionado; ver `.env.example`).
 ## Estado y deudas técnicas
 
 - [x] EDA con esquema nuevo (incl. correlaciones por posición)
-- [x] Modelo de perfil puro + L1 corregido + RandomForest
+- [x] Modelo esquema 9 (experimento AUPRC) + L1 corregido + RandomForest
 - [x] Pipeline de scouting sobre `candidatos_mercado`
 - [x] NLP de sentimiento con fallback a placeholders
 - [x] Automatización local (script + Task Scheduler)
