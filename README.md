@@ -1,19 +1,21 @@
 # Scouting & Hype Boca Juniors
 
-Sistema de Data Science para identificar fichajes con "ADN Boca" y medir el
-sentimiento de la hinchada. El objetivo es producir un ranking semanal de
-candidatos del mercado y un tweet con el top 5.
+Radar semanal de jugadores destacados en los equipos de la fecha de varias
+ligas. La L1 ordena qué perfiles se parecen más a las etiquetas manuales de
+ADN Boca; el siguiente objetivo es sumar sentimiento real y publicar el top 5.
 
-## Arquitectura objetivo
+## Arquitectura
 
 ```
-candidatos_mercado (API Football) ─┐
-                                  ├─► scouting_pipeline.py ─► scouting_resultado.csv ─┐
-modelo_adn_boca.pkl + scaler +      │                                                  ├─► automatizacion.py ─► tweet top-5
-position_encoder (models/*.pkl)     │                                                  │
-                                   ▼                                                  │
-Reddit (praw + VADER) ─► sentimiento_hinchada.ipynb ─► sentimiento_hinchada.csv ───────┘
+FotMob Team of the Week + fixtures ─┐
+API-Football (stats de liga/temporada)├─► scouting_pipeline.py ─► ranking_jugadores_fecha_YYYY-Www.csv
+modelo L1 + scaler + encoder ─────────┘                                  │
+                                                                         ├─► sentimiento real (pendiente)
+                                                                         └─► automatización/tweet (pendiente)
 ```
+
+El prototipo `scouting_mercado.py` y `ranking_acumulado.py` conserva un flujo
+histórico con filtros/deduplicación distintos; no se usa para el nuevo radar.
 
 ## Cómo correr
 
@@ -21,11 +23,22 @@ Reddit (praw + VADER) ─► sentimiento_hinchada.ipynb ─► sentimiento_hinch
 # 1. Entrenar / re-entrenar el modelo (genera models/*.pkl y scouting_resultado_historico.csv)
 python src/train_model.py
 
-# 2. Scouting de candidatos — pendiente: src/scouting_pipeline.py aún no existe
+# 2. Radar de equipos de la fecha (semana ISO completa anterior, UTC)
+python src/scouting_pipeline.py
 
-# 3. Automatización local; el flujo completo espera al pipeline de scouting
+# 3. La automatización actual aún consume el formato antiguo de mercado
+#    y no está conectada al nuevo ranking semanal
 python src/automatizacion.py
 ```
+
+El pipeline semanal requiere `API_KEY` en `secrets/.env`. Al ejecutarlo hace
+llamadas a FotMob/API-Football, refresca la caché `api_cache` de FotMob en SQLite
+y guarda el ranking y un CSV separado de jugadores no resueltos. Las consultas
+de stats a API-Football evitan su caché permanente para no reciclar datos de una
+semana anterior. Usa los datos de temporada vigentes al momento de captura: no
+hacer backfill histórico con stats finales de temporada, porque incorporarían
+partidos posteriores al TOTW. Antes de producción hay que verificar cuota y
+presupuesto de llamadas.
 
 Los notebooks activos se ejecutan con kernel Python 3 desde Jupyter (`python -m
 jupyter notebook`). `src/model_training.ipynb` es legado: no ejecutarlo para
@@ -67,7 +80,9 @@ jugador):
 La prevalencia de cada bloque (0.368, 0.270 y 0.240) es su baseline de AUPRC.
 El RF queda como comparador: lideró en los bloques antiguos, pero bajó a AUPRC
 0.643 y precisión top-10 5/10 en 2023–2024. Las cohortes son pequeñas, así que
-los resultados orientan la elección, no garantizan el rendimiento futuro.
+los resultados orientan la elección, no garantizan el rendimiento futuro. El
+score se usa para ordenar este universo seleccionado por TOTW; no es una
+probabilidad calibrada para todo el mercado.
 
 ## Datos
 
@@ -76,7 +91,9 @@ los resultados orientan la elección, no garantizan el rendimiento futuro.
 | `data/adn_boca_real.csv` | Raw etiquetado (con rating, 795 filas) |
 | `data/adn_boca_real_features.csv` | Features sin rating (795×14, fuente de entrenamiento) |
 | `data/scouting_resultado_historico.csv` | Predicciones del modelo (OOF en train, test directo) |
-| `data/scouting_resultado.csv` | Ranking existente; su regeneración automática espera al pipeline de scouting |
+| `data/ranking_jugadores_fecha_YYYY-Www.csv` | Ranking semanal nuevo, una fila por jugador, con score y captura de stats |
+| `data/jugadores_fecha_no_resueltos_YYYY-Www.csv` | TOTW sin cruce/estadísticas completas; no se puntúan |
+| `data/scouting_resultado.csv` | Ranking antiguo de mercado; no lo genera el radar semanal |
 | `data/sentimiento_hinchada.csv` | Comentarios + VADER compound + clasificación |
 | `data/boca_juniors.db` | `candidatos_mercado`, `scouting_resultado`, `adn_boca`, ... |
 
@@ -86,9 +103,10 @@ Credenciales en `secrets/.env` (no versionado; ver `.env.example`).
 
 - [x] EDA con esquema nuevo (incl. correlaciones por posición)
 - [x] Esquema de 9 features y validación temporal por jugador de L1/RF
-- [ ] Implementar `src/scouting_pipeline.py` para puntuar `candidatos_mercado` y generar el ranking
+- [x] MVP offline del radar semanal TOTW → stats API-Football → ranking del modelo
+- [ ] Validar integración live (seasons, rounds, nombres/equipos, cuota API y caché SQLite)
 - [x] NLP de sentimiento con fallback a placeholders
-- [x] Script de automatización local; ejecución integral pendiente de implementar scouting
+- [x] Script de automatización local; integración con `ranking_jugadores_fecha` pendiente
 - [ ] Refrescar `candidatos_mercado` por API (API_KEY vacía — **rotar keys**:
       quedaron en el historial git)
 - [ ] Activar scrape real de Reddit (app tipo *script*; hoy 401 → placeholders)
@@ -115,6 +133,5 @@ schtasks /Create /SC WEEKLY /D MON /ST 09:00 /TN "BocaScouting" /TR "C:\Users\Ag
 python -m pytest tests -q
 ```
 
-Cubren: rating fuera de features, definición de etiqueta, split por jugador,
-multicolinealidad, pkls cargables, consistencia config/features, ranking y
-histórico válidos.
+Cubren reglas del modelo y casos offline del radar: semana/round, cruce estricto
+de jugador, deduplicación semanal y rechazo de features faltantes.

@@ -1,7 +1,11 @@
 """
-Extraccion de features del modelo desde el perfil de jugador de FotMob.
+Extractor legacy de perfil/trayectoria desde FotMob para el TOTW historico.
 
-El modelo ADN Boca (config.pkl) usa:
+No entrega goles/asistencias y no alimenta directamente el modelo vigente de
+9 features. El radar semanal obtiene estadisticas por jugador/temporada desde
+API-Football en `scouting_pipeline.py`.
+
+El antiguo flujo de scoring esperaba:
   pases_precisos, edad, temporadas_en_dataset, partidos_por_temporada,
   perfil_ofensivo + dummies de posicion.
 

@@ -13,22 +13,28 @@ resultados dudosos antes de darlos por buenos. Respondés en español.
 - Si detectás un error o algo urgente, reportalo y proponé la solución, pero no la apliques.
 
 ## Contexto
-Sistema de DS para identificar fichajes con "ADN Boca" y medir el sentimiento de la hinchada.
+Sistema de DS para identificar perfiles con "ADN Boca" entre jugadores destacados de varias
+competiciones y medir el sentimiento de la hinchada.
 - Stack: Python (pandas, numpy, scikit-learn, matplotlib, seaborn, joblib), SQLite, API Football API-Sports v3.
-- Objetivo: ranking semanal de candidatos + tweet con top 5.
+- Objetivo actual: radar semanal de equipos de la fecha de FotMob + score/ranking top 5.
+  El sentimiento real y la integración del tweet quedan para una etapa posterior.
 - Estado real: entrenamiento e inferencia sincronizados con el esquema de 9 features,
   CV/OOF por jugador con GroupKFold; EDA y notebooks activos al día. `model_training.ipynb`
   conserva un flujo legado y no es fuente de artefactos. La selección del clasificador debe
   basarse en validación temporal y métricas
   de ranking, no quedar codificada como una decisión permanente en estas instrucciones.
-  Faltan: el pipeline de scoring de candidatos del mercado (src/scouting_pipeline.py
-  no existe), NLP/sentimiento real y la automatización semanal + tweet.
+  `src/scouting_pipeline.py` contiene un MVP offline para equipos de la fecha FotMob +
+  estadísticas API-Football + ranking semanal. Falta validar respuestas live, el cruce de
+  jugadores y el uso de cuota/caché. También faltan NLP/sentimiento real y la integración
+  de la automatización semanal + tweet con el nuevo ranking.
 
 ## Datos (fuente de verdad)
 - data/adn_boca_real_features.csv → features principal (795 × 14). NO tiene rating (evita leakage).
 - data/adn_boca_real.csv → raw etiquetado (con rating).
-- data/scouting_resultado.csv → salida del ranking.
+- data/scouting_resultado.csv → salida legacy del ranking de mercado.
 - data/scouting_resultado_historico.csv → predicciones del modelo (OOF en train, test directo; 729 filas).
+- data/ranking_jugadores_fecha_YYYY-Www.csv → ranking semanal TOTW por score del modelo.
+- data/jugadores_fecha_no_resueltos_YYYY-Www.csv → TOTW sin identidad/stats completas; excluidos del score.
 - data/boca_juniors.db → adn_boca, jugadores_entrenamiento, candidatos_mercado (180 jugadores), plantilla (vacía).
 - models/*.pkl → artefacto principal y comparadores Logistic/RF, scaler.pkl,
   features_list.pkl, config.pkl, position_encoder.pkl.
@@ -40,7 +46,7 @@ temporadas_en_dataset. NO usar participacion_gol, pases_norm, rendimiento, edad_
 + dummies de posición (esquema decidido por experimento AUPRC).
 
 ## Comandos
-- Tests: `python -m pytest tests -q` (8 tests de reglas de DS).
+- Tests: `python -m pytest tests -q` (17 tests: reglas de DS + parsing/scoring offline).
 - Ejecutar notebooks con kernel Python 3.12 (python312, el único con nbclient + seaborn).
 - Regenerar datos: `python src/merge_datasets.py` desde la raíz.
 - Validar cambios: re-ejecutar la celda/notebook afectado y comparar outputs.
@@ -64,18 +70,19 @@ temporadas_en_dataset. NO usar participacion_gol, pases_norm, rendimiento, edad_
 1. (resuelto) Notebooks de modelo: re-ejecutados con esquema 9 (sin arqueros, 729 filas).
 2. (resuelto) L1 corregida: penalty='l1' + solver='saga' en train_model.py.
 3. (resuelto) eda.ipynb: re-ejecutado completo (39 celdas, 0 errores).
-4. src/scouting_pipeline.py NO existe (README lo referencia; queda un __pycache__ huérfano).
-   Es la deuda principal: el pipeline de scouting está por construir.
+4. (MVP implementado, live pendiente) `src/scouting_pipeline.py`: verificar el formato real de
+   fixtures/rounds de FotMob, season/league/players de API-Football y el cruce nombre+club+liga.
+   No ejecutar contra APIs hasta confirmar `API_KEY` y presupuesto de llamadas; el uso live
+   actualiza la caché SQLite `api_cache`.
 
 ## Completar el proyecto (orden sugerido)
 1. (hecho) Re-ejecutar EDA con el esquema nuevo (incl. celdas 28–30).
 2. (hecho) Unificar esquema en los notebooks de modelo (9 features) y corregir L1.
-3. Pipeline de scouting: crear src/scouting_pipeline.py (aplicar modelo a candidatos_mercado
-   → ranking → scouting_resultado.csv). Solucionar primero el cacheo de goles/asistencias
-   de candidatos (hoy 0/None en FotMob): son features del esquema 9.
+3. (MVP hecho) Radar semanal de TOTW: FotMob → fixtures/semana → stats de temporada en
+   API-Football → score → `ranking_jugadores_fecha_YYYY-Www.csv`. Falta validación live.
 4. NLP: sentimiento de la hinchada (placeholders Reddit en .env).
 5. Automatización semanal + publicación de tweet top-5.
-6. Tests mínimos ya en pytest (8 reglas); documentar README al resto de cambios.
+6. Tests offline en pytest (17 casos); documentar resultados live cuando se autoricen.
 
 ## Límites
 - ✅ Editar notebooks/.py, regenerar CSVs desde merge_datasets.py, reentrenar y guardar en models/

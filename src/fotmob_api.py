@@ -70,9 +70,9 @@ class FotMobApi:
     def _clave(tipo, *args):
         return _PREFIX + tipo + '|' + '|'.join(str(a) for a in args)
 
-    def _llamar(self, tipo, *args):
+    def _llamar(self, tipo, *args, force_refresh=False):
         clave = self._clave(tipo, *args)
-        valor = _get_cache(clave)
+        valor = None if force_refresh else _get_cache(clave)
         if valor is not None:
             return valor
         coro = None
@@ -80,6 +80,10 @@ class FotMobApi:
             coro = self._client.totw_rounds(*args)
         elif tipo == 'totw':
             coro = self._client.totw(*args)
+        elif tipo == 'fixtures':
+            coro = self._client.get_league_fixtures(*args)
+        elif tipo == 'current_season':
+            coro = self._client.get_league_current_season(*args)
         elif tipo == 'player':
             coro = self._client.get_player(*args)
         elif tipo == 'team':
@@ -93,19 +97,27 @@ class FotMobApi:
             self._client = self._FotMob()
             coro = self._client.totw_rounds(*args) if tipo == 'rounds' \
                 else self._client.totw(*args) if tipo == 'totw' \
+                else self._client.get_league_fixtures(*args) if tipo == 'fixtures' \
+                else self._client.get_league_current_season(*args) if tipo == 'current_season' \
                 else self._client.get_player(*args) if tipo == 'player' \
                 else self._client.get_team(*args)
             valor = self._loop.run_until_complete(coro)
         self._reales += 1
-        if isinstance(valor, (dict, list)):
+        if valor is not None:
             _set_cache(clave, valor)
         return valor
 
-    def totw_rounds(self, league_id, season):
-        return self._llamar('rounds', league_id, season)
+    def totw_rounds(self, league_id, season, force_refresh=False):
+        return self._llamar('rounds', league_id, season, force_refresh=force_refresh)
 
-    def totw(self, league_id, season, roundnum):
-        return self._llamar('totw', league_id, season, roundnum)
+    def totw(self, league_id, season, roundnum, force_refresh=False):
+        return self._llamar('totw', league_id, season, roundnum, force_refresh=force_refresh)
+
+    def fixtures(self, league_id, season, force_refresh=False):
+        return self._llamar('fixtures', league_id, season, force_refresh=force_refresh)
+
+    def temporada_actual(self, league_id, force_refresh=False):
+        return self._llamar('current_season', league_id, force_refresh=force_refresh)
 
     def jugador(self, player_id):
         return self._llamar('player', player_id)

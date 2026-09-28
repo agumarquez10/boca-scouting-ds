@@ -1,7 +1,11 @@
 """
-Scouting de mercado: busqueda de candidatos via 11 ideal de FotMob.
+Prototipo legado de mercado: busqueda de candidatos via historico TOTW FotMob.
 
-Pipeline completo:
+No es el radar semanal actual: filtra edad/trayectoria, deduplica entre rondas
+historicas y su extractor no incluye goles/asistencias del esquema vigente.
+El MVP semanal esta en `scouting_pipeline.py`.
+
+Flujo historico:
   1. ranking_acumulado → 11 ideal historico (TODAS las posiciones)
   2. Dedup por jugador (mejor rating) + filtro edad < 32
   3. aplicar_modelo → probabilidad ADN Boca (0.0-1.0)

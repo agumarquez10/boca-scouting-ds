@@ -13,13 +13,14 @@ MODEL_DIR = os.path.join(SCRIPT_DIR, '..', 'models')
 
 
 def construir_features_jugador(jugador_stats):
-    """Construye features de perfil para un jugador desde la API Football.
+    """Legacy: transforma un player record de API-Football en features antiguas.
 
     Acepta un dict con la estructura de statistics[0] de la API:
     - player: {id, name, age, ...}
     - statistics: [{games: {appearences, position}, passes: {total, accuracy}}]
 
-    Devuelve un dict con las features del modelo (sin pases_precisos).
+    No incluye goles/asistencias y no sirve directamente para el esquema vigente.
+    El radar semanal obtiene esas variables en `scouting_pipeline.py`.
     """
     player = jugador_stats.get('player', {})
     stats = jugador_stats.get('statistics', [{}])
