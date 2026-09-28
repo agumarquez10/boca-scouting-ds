@@ -61,6 +61,8 @@ def test_pkls_cargables_y_prediccion_valida():
     modelo = joblib.load(os.path.join(MODEL_DIR, 'modelo_adn_boca.pkl'))
     scaler = joblib.load(os.path.join(MODEL_DIR, 'scaler.pkl'))
     encoder = joblib.load(os.path.join(MODEL_DIR, 'position_encoder.pkl'))
+    assert modelo.penalty == 'l1'
+    assert modelo.solver == 'saga'
 
     fila = {'goles': 8, 'asistencias': 4, 'edad': 23}
     X_base = pd.DataFrame([fila])

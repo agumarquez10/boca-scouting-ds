@@ -28,8 +28,9 @@ python src/scouting_pipeline.py
 python src/automatizacion.py
 ```
 
-Los notebooks (`src/eda.ipynb`, `src/model_training.ipynb`, etc.) se ejecutan
-con kernel Python 3 desde Jupyter (`python -m jupyter notebook`).
+Los notebooks activos se ejecutan con kernel Python 3 desde Jupyter (`python -m
+jupyter notebook`). `src/model_training.ipynb` es legado: no ejecutarlo para
+entrenar ni generar artefactos; usar `src/train_model.py`.
 
 ## Reglas de Data Science (obligatorias)
 
@@ -49,16 +50,25 @@ con kernel Python 3 desde Jupyter (`python -m jupyter notebook`).
 ## Features del modelo (esquema 9)
 
 `goles`, `asistencias`, `edad` + 6 dummies de posición (`position_encoder.pkl`).
-Son 9 features según el experimento AUPRC: el resto (pases, continuidad, rol)
-es ruido — la L1 los reduce a 0 y el RF de 9 features iguala o supera al de 13.
-CV y OOF por jugador (GroupKFold). `rating` fuera (no hay rating API para el
-mercado; además correlaciona +0.88 con `goles`).
+Son 9 features; `rating` queda fuera porque no hay un valor comparable para los
+candidatos del mercado. La etiqueta es manual, por eso goles/asistencias no
+codifican una fórmula determinista de la etiqueta.
 
-Resultado en test (validación temporal): `modelo_adn_boca.pkl` (Logistic,
-AUC 0.755, OOF 0.872), `modelo_logistic_l1.pkl` (L1 saga, AUC 0.773),
-`modelo_bosque.pkl` (RandomForest, **AUC 0.779**). AUPRC ~0.72–0.74
-(2.2× el azar = prevalencia 0.333) y top-10 10/10 en test: el ranking sirve
-para el top-N semanal.
+Se seleccionó Logistic L1 (`penalty='l1'`, `solver='saga'`) para el ranking.
+La selección de `C` usa AUPRC con GroupKFold por jugador y el escalador se ajusta
+dentro de cada fold. Validación temporal por snapshots recientes (una fila por
+jugador):
+
+| Última temporada del jugador | Jugadores (+) | L1 AUPRC | L1 AUC-ROC | Precisión top-10 |
+|---|---:|---:|---:|---:|
+| 2015–2019 | 38 (14) | 0.695 | 0.769 | 6/10 |
+| 2020–2022 | 37 (10) | 0.731 | 0.791 | 7/10 |
+| 2023–2024 | 50 (12) | 0.736 | 0.854 | 7/10 |
+
+La prevalencia de cada bloque (0.368, 0.270 y 0.240) es su baseline de AUPRC.
+El RF queda como comparador: lideró en los bloques antiguos, pero bajó a AUPRC
+0.643 y precisión top-10 5/10 en 2023–2024. Las cohortes son pequeñas, así que
+los resultados orientan la elección, no garantizan el rendimiento futuro.
 
 ## Datos
 
@@ -76,7 +86,7 @@ Credenciales en `secrets/.env` (no versionado; ver `.env.example`).
 ## Estado y deudas técnicas
 
 - [x] EDA con esquema nuevo (incl. correlaciones por posición)
-- [x] Modelo esquema 9 (experimento AUPRC) + L1 corregido + RandomForest
+- [x] Esquema de 9 features y validación temporal por jugador de L1/RF
 - [x] Pipeline de scouting sobre `candidatos_mercado`
 - [x] NLP de sentimiento con fallback a placeholders
 - [x] Automatización local (script + Task Scheduler)

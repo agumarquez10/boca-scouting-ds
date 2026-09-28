@@ -16,8 +16,11 @@ resultados dudosos antes de darlos por buenos. Respondés en español.
 Sistema de DS para identificar fichajes con "ADN Boca" y medir el sentimiento de la hinchada.
 - Stack: Python (pandas, numpy, scikit-learn, matplotlib, seaborn, joblib), SQLite, API Football API-Sports v3.
 - Objetivo: ranking semanal de candidatos + tweet con top 5.
-- Estado real: modelo vigente entrenado y sincronizado (esquema 9 features, CV/OOF por
-  jugador con GroupKFold); EDA y notebooks de modelo al día (re-ejecutados, 0 errores).
+- Estado real: entrenamiento e inferencia sincronizados con el esquema de 9 features,
+  CV/OOF por jugador con GroupKFold; EDA y notebooks activos al día. `model_training.ipynb`
+  conserva un flujo legado y no es fuente de artefactos. La selección del clasificador debe
+  basarse en validación temporal y métricas
+  de ranking, no quedar codificada como una decisión permanente en estas instrucciones.
   Faltan: el pipeline de scoring de candidatos del mercado (src/scouting_pipeline.py
   no existe), NLP/sentimiento real y la automatización semanal + tweet.
 
@@ -27,7 +30,7 @@ Sistema de DS para identificar fichajes con "ADN Boca" y medir el sentimiento de
 - data/scouting_resultado.csv → salida del ranking.
 - data/scouting_resultado_historico.csv → predicciones del modelo (OOF en train, test directo; 729 filas).
 - data/boca_juniors.db → adn_boca, jugadores_entrenamiento, candidatos_mercado (180 jugadores), plantilla (vacía).
-- models/*.pkl → modelo_adn_boca.pkl, modelo_logistic_l1.pkl, modelo_bosque.pkl, scaler.pkl,
+- models/*.pkl → artefacto principal y comparadores Logistic/RF, scaler.pkl,
   features_list.pkl, config.pkl, position_encoder.pkl.
 - src/merge_datasets.py → pipeline de datos. outputs/*.png → figuras.
 

@@ -11,7 +11,8 @@ import pandas as pd
 import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
+from sklearn.metrics import (average_precision_score, classification_report,
+                             confusion_matrix, roc_auc_score)
 from sklearn.model_selection import GridSearchCV, GroupKFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
@@ -29,13 +30,10 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 warnings.filterwarnings('ignore')
 
 # ============================================================
-# Features del modelo (esquema 9, decidido por experimento AUPRC):
-# goles, asistencias, edad + dummies de posicion. El resto de las
-# variables numericas (pases, continuidad, rol) resultaron ruido:
-# la L1 los reduce a 0 y el RF de 9 features iguala o supera al de
-# 13. La etiqueta es manual (sin formula), asi que goles/asistencias
-# son features validas. rating queda fuera: no hay rating
-# API-Football para inferir en el mercado.
+# Features del modelo (esquema 9): goles, asistencias, edad + dummies
+# de posicion. La etiqueta es manual (sin formula), asi que
+# goles/asistencias son features validas. rating queda fuera: no hay
+# rating API-Football comparable para inferir en el mercado.
 # ============================================================
 BASE_FEATURES = ['goles', 'asistencias', 'edad']
 
@@ -71,23 +69,52 @@ def split_por_jugador(df):
 
 
 def entrenar_modelo_principal(X_train, X_test, y_train, y_test, features, df, test_mask, grupos):
+    X_train = X_train.reset_index(drop=True)
+    X_test = X_test.reset_index(drop=True)
+    y_train = y_train.reset_index(drop=True)
+    y_test = y_test.reset_index(drop=True)
+    df_train = df.loc[~test_mask].reset_index(drop=True)
+    grupos = np.asarray(grupos)
+
+    # Se elige C por AUPRC en snapshots recientes de jugadores no vistos.
+    # El escalador se ajusta dentro de cada fold para evitar fuga de preprocessing.
+    resultados_cv = []
+    for c in [0.01, 0.1, 1, 10]:
+        scores = []
+        gkf = GroupKFold(n_splits=5)
+        for idx_train, idx_val in gkf.split(X_train, y_train, groups=grupos):
+            scaler_fold = StandardScaler().fit(X_train.iloc[idx_train])
+            X_fold_train = scaler_fold.transform(X_train.iloc[idx_train])
+            modelo_fold = LogisticRegression(
+                penalty='l1', solver='saga', C=c, class_weight='balanced',
+                max_iter=5000, random_state=RANDOM_STATE)
+            modelo_fold.fit(X_fold_train, y_train.iloc[idx_train])
+
+            val_df = df_train.iloc[idx_val]
+            idx_recientes = (val_df.sort_values(['nombre', 'temporada'])
+                             .groupby('nombre', as_index=False).tail(1).index.to_numpy())
+            X_val = scaler_fold.transform(X_train.iloc[idx_recientes])
+            prob_val = modelo_fold.predict_proba(X_val)[:, 1]
+            scores.append(average_precision_score(y_train.iloc[idx_recientes], prob_val))
+        resultados_cv.append((float(np.mean(scores)), float(np.std(scores, ddof=1)), c))
+
+    cv_ap, cv_sd, mejor_c = max(resultados_cv, key=lambda r: r[0])
     scaler = StandardScaler().fit(X_train)
     X_train_scaled = scaler.transform(X_train)
     X_test_scaled = scaler.transform(X_test)
-
-    param_grid = {'C': [0.01, 0.1, 1, 10, 100]}
-    lr = LogisticRegression(class_weight='balanced', max_iter=2000, random_state=RANDOM_STATE)
-    grid = GridSearchCV(lr, param_grid, cv=GroupKFold(n_splits=5), scoring='roc_auc')
-    grid.fit(X_train_scaled, y_train, groups=grupos)
-    modelo = grid.best_estimator_
+    modelo = LogisticRegression(
+        penalty='l1', solver='saga', C=mejor_c, class_weight='balanced',
+        max_iter=5000, random_state=RANDOM_STATE)
+    modelo.fit(X_train_scaled, y_train)
 
     y_pred = modelo.predict(X_test_scaled)
     y_prob = modelo.predict_proba(X_test_scaled)[:, 1]
     auc = roc_auc_score(y_test, y_prob)
+    ap = average_precision_score(y_test, y_prob)
 
-    print('=== MODELO PRINCIPAL: LogisticRegression balanceada (perfil puro) ===')
-    print(f'Mejor C: {grid.best_params_["C"]} | Mejor AUC (CV): {grid.best_score_:.3f}')
-    print(f'AUC-ROC test: {auc:.3f}')
+    print('=== MODELO PRINCIPAL: LogisticRegression L1 (saga) ===')
+    print(f'Mejor C: {mejor_c} | AUPRC CV latest-player: {cv_ap:.3f} ± {cv_sd:.3f}')
+    print(f'AUC-ROC test: {auc:.3f} | AUPRC test (filas): {ap:.3f}')
     print(classification_report(y_test, y_pred, target_names=['No encaja', 'ADN Boca']))
 
     cm = confusion_matrix(y_test, y_pred)
@@ -114,12 +141,17 @@ def entrenar_modelo_principal(X_train, X_test, y_train, y_test, features, df, te
 
     gkf = GroupKFold(n_splits=5)
     oof = np.zeros(len(X_train))
-    for train_idx, val_idx in gkf.split(X_train_scaled, y_train, groups=grupos):
-        lr_fold = LogisticRegression(class_weight='balanced', C=modelo.C,
-                                     max_iter=2000, random_state=RANDOM_STATE)
-        lr_fold.fit(X_train_scaled[train_idx], y_train.iloc[train_idx])
-        oof[val_idx] = lr_fold.predict_proba(X_train_scaled[val_idx])[:, 1]
+    for train_idx, val_idx in gkf.split(X_train, y_train, groups=grupos):
+        scaler_fold = StandardScaler().fit(X_train.iloc[train_idx])
+        X_fold_train = scaler_fold.transform(X_train.iloc[train_idx])
+        X_fold_val = scaler_fold.transform(X_train.iloc[val_idx])
+        lr_fold = LogisticRegression(
+            penalty='l1', solver='saga', C=mejor_c, class_weight='balanced',
+            max_iter=5000, random_state=RANDOM_STATE)
+        lr_fold.fit(X_fold_train, y_train.iloc[train_idx])
+        oof[val_idx] = lr_fold.predict_proba(X_fold_val)[:, 1]
     print(f'OOF AUC (GroupKFold por jugador): {roc_auc_score(y_train, oof):.3f}')
+    print(f'OOF AUPRC (filas): {average_precision_score(y_train, oof):.3f}')
 
     return modelo, scaler, y_pred, y_prob, oof, auc
 
@@ -143,21 +175,6 @@ def guardar_scouting(df, features, test_mask, oof, y_prob):
                      index=False, encoding='utf-8-sig')
     print(f'\nscouting_resultado_historico.csv guardado ({len(resultado)} filas)')
     return resultado
-
-
-def entrenar_modelo_l1(X_train, X_test, y_train, y_test, grupos):
-    print('\n=== MODELO ALTERNATIVO: LogisticRegression L1 (saga) ===')
-    param_grid = {'C': [0.01, 0.1, 1, 10]}
-    lr = LogisticRegression(penalty='l1', solver='saga', class_weight='balanced',
-                            max_iter=3000, random_state=RANDOM_STATE)
-    grid = GridSearchCV(lr, param_grid, cv=GroupKFold(n_splits=5), scoring='roc_auc')
-    grid.fit(X_train, y_train, groups=grupos)
-    modelo = grid.best_estimator_
-    y_pred = modelo.predict(X_test)
-    y_prob = modelo.predict_proba(X_test)[:, 1]
-    print(f'Mejor C: {grid.best_params_["C"]} | AUC test: {roc_auc_score(y_test, y_prob):.3f}')
-    print(classification_report(y_test, y_pred, target_names=['No encaja', 'ADN Boca']))
-    return modelo
 
 
 def entrenar_modelo_arbol(X_train, X_test, y_train, y_test, grupos):
@@ -211,7 +228,6 @@ def main():
 
     guardar_scouting(df, features, test_mask, oof, y_prob)
 
-    modelo_l1 = entrenar_modelo_l1(X_train, X_test, y_train, y_test, grupos)
     modelo_arbol = entrenar_modelo_arbol(X_train, X_test, y_train, y_test, grupos)
     modelo_bosque = entrenar_modelo_bosque(X_train, X_test, y_train, y_test, grupos)
 
@@ -219,7 +235,7 @@ def main():
     joblib.dump(scaler, os.path.join(MODEL_DIR, 'scaler.pkl'))
     joblib.dump(features, os.path.join(MODEL_DIR, 'features_list.pkl'))
     joblib.dump(encoder, os.path.join(MODEL_DIR, 'position_encoder.pkl'))
-    joblib.dump(modelo_l1, os.path.join(MODEL_DIR, 'modelo_logistic_l1.pkl'))
+    joblib.dump(modelo, os.path.join(MODEL_DIR, 'modelo_logistic_l1.pkl'))
     joblib.dump(modelo_arbol, os.path.join(MODEL_DIR, 'modelo_arbol.pkl'))
     joblib.dump(modelo_bosque, os.path.join(MODEL_DIR, 'modelo_bosque.pkl'))
     joblib.dump({'features': BASE_FEATURES, 'pos_columns': POS_COLUMNS},
