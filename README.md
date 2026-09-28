@@ -1,10 +1,10 @@
 # Scouting & Hype Boca Juniors
 
 Sistema de Data Science para identificar fichajes con "ADN Boca" y medir el
-sentimiento de la hinchada. Produce un ranking semanal de candidatos del
-mercado y un tweet con el top 5.
+sentimiento de la hinchada. El objetivo es producir un ranking semanal de
+candidatos del mercado y un tweet con el top 5.
 
-## Pipeline
+## Arquitectura objetivo
 
 ```
 candidatos_mercado (API Football) ─┐
@@ -21,10 +21,9 @@ Reddit (praw + VADER) ─► sentimiento_hinchada.ipynb ─► sentimiento_hinch
 # 1. Entrenar / re-entrenar el modelo (genera models/*.pkl y scouting_resultado_historico.csv)
 python src/train_model.py
 
-# 2. Scouting de candidatos (ranking + tabla SQLite)
-python src/scouting_pipeline.py
+# 2. Scouting de candidatos — pendiente: src/scouting_pipeline.py aún no existe
 
-# 3. Automatización semanal completa (scouting + sentimiento + tweet)
+# 3. Automatización local; el flujo completo espera al pipeline de scouting
 python src/automatizacion.py
 ```
 
@@ -77,7 +76,7 @@ los resultados orientan la elección, no garantizan el rendimiento futuro.
 | `data/adn_boca_real.csv` | Raw etiquetado (con rating, 795 filas) |
 | `data/adn_boca_real_features.csv` | Features sin rating (795×14, fuente de entrenamiento) |
 | `data/scouting_resultado_historico.csv` | Predicciones del modelo (OOF en train, test directo) |
-| `data/scouting_resultado.csv` | **Ranking semanal de candidatos** (salida del pipeline) |
+| `data/scouting_resultado.csv` | Ranking existente; su regeneración automática espera al pipeline de scouting |
 | `data/sentimiento_hinchada.csv` | Comentarios + VADER compound + clasificación |
 | `data/boca_juniors.db` | `candidatos_mercado`, `scouting_resultado`, `adn_boca`, ... |
 
@@ -87,9 +86,9 @@ Credenciales en `secrets/.env` (no versionado; ver `.env.example`).
 
 - [x] EDA con esquema nuevo (incl. correlaciones por posición)
 - [x] Esquema de 9 features y validación temporal por jugador de L1/RF
-- [x] Pipeline de scouting sobre `candidatos_mercado`
+- [ ] Implementar `src/scouting_pipeline.py` para puntuar `candidatos_mercado` y generar el ranking
 - [x] NLP de sentimiento con fallback a placeholders
-- [x] Automatización local (script + Task Scheduler)
+- [x] Script de automatización local; ejecución integral pendiente de implementar scouting
 - [ ] Refrescar `candidatos_mercado` por API (API_KEY vacía — **rotar keys**:
       quedaron en el historial git)
 - [ ] Activar scrape real de Reddit (app tipo *script*; hoy 401 → placeholders)
