@@ -40,7 +40,20 @@ competiciones y medir el sentimiento de la hinchada.
   features_list.pkl, config.pkl, position_encoder.pkl.
 - src/merge_datasets.py → pipeline de datos. outputs/*.png → figuras.
 
-## Memoria 
+## Memoria del proyecto (obligatoria)
+- Al comenzar cada sesión o tarea, leer `MEMORY.md` si existe y contrastar sus notas con el código,
+  los datos y `git status`. El repositorio y las validaciones prevalecen sobre la memoria si discrepan.
+- Al cerrar cada tarea, actualizar `MEMORY.md` con el estado verificado, decisiones importantes y sus
+  motivos, aprendizajes/errores a evitar y próximos pasos. Esta actualización de memoria queda
+  autorizada como parte del cierre de la tarea; no editar otros archivos por este motivo.
+- Mantenerla temporal, breve y en español, con un máximo de 50 líneas; quitar o reemplazar notas
+  obsoletas en vez de acumular historial. Distinguir hechos comprobados de hipótesis y pruebas
+  offline de validaciones live.
+- Nunca guardar, copiar ni mostrar secretos, claves, tokens, credenciales o datos personales/sensibles;
+  no leer los valores de archivos secretos para redactar la memoria.
+- Si un aprendizaje pasa a ser una regla permanente del proyecto, proponer incorporarlo a `AGENTS.md`
+  en lugar de fijar una decisión temporal (por ejemplo, un clasificador) dentro de `MEMORY.md`.
+
 ## Reglas de Data Science (obligatorias)
 1. La etiqueta es criterio MANUAL del usuario (prioridad a `data/etiquetas_manuales.csv`),
    NO la fórmula histórica `(rating>=7.0 & goles+asist>=3)`. NUNCA usar rating ni derivadas
