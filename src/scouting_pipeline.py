@@ -1,8 +1,4 @@
-"""Ranking semanal de jugadores de los Team of the Week de FotMob.
-
-FotMob aporta las alineaciones y fechas; API-Football aporta estadisticas de
-la temporada activa. Solo se puntua un snapshot por jugador y semana.
-"""
+"""Ranking semanal TOTW con fixtures y estadisticas de perfil de FotMob."""
 
 import os
 import re
@@ -17,11 +13,11 @@ ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 DATA_DIR = os.path.join(ROOT_DIR, 'data')
 sys.path.insert(0, SCRIPT_DIR)
 
-from api_football import ApiFootball
 from construir_features import aplicar_modelo
 from fotmob_api import FotMobApi
 from ligas import ligas_activas
-from posiciones import agrupar_posicion, posicion_desde_layout
+from posiciones import (FOTMOB_KEY_ETIQUETA, agrupar_posicion,
+                        posicion_desde_layout)
 
 
 def normalizar_texto(valor):
@@ -252,95 +248,83 @@ def recolectar_totw_semana(api_fotmob, liga, inicio, fin):
     return filas, avisos
 
 
-def resolver_liga_api_football(api_football, liga, semana):
-    # Filtramos localmente desde el listado del país: combinar `country` y
-    # `search` puede devolver cero filas en algunos resultados de API-Football.
-    parametros = {'country': liga['api_country']}
-    # La cache global no tiene TTL: refrescar la temporada activa semanalmente.
-    payload = api_football.get('leagues', parametros, use_cache=False)
-    respuesta = payload.get('response', [])
-    termino = normalizar_texto(liga['api_league_search'])
-    candidatas = []
-    for item in respuesta:
-        league = item.get('league') or {}
-        if (item.get('country', {}).get('name', '').lower() != liga['api_country'].lower()
-                and item.get('country', {}).get('code', '').lower() != liga['api_country'].lower()):
-            continue
-        nombre_liga = normalizar_texto(league.get('name'))
-        if termino not in nombre_liga:
-            continue
-        temporadas = item.get('seasons') or []
-        nombre_exacto = nombre_liga == termino
-        for season in temporadas:
-            try:
-                year = int(season.get('year'))
-            except (TypeError, ValueError):
-                continue
-            misma_temporada_calendario = year == semana.year
-            actual_reciente = bool(season.get('current')) and 0 <= semana.year - year <= 1
-            if misma_temporada_calendario or actual_reciente:
-                candidatas.append((not nombre_exacto, abs(semana.year - year),
-                                   league.get('id'), year))
-    if candidatas:
-        mejor_rango = min((c[0], c[1]) for c in candidatas)
-        candidatas = [c for c in candidatas if (c[0], c[1]) == mejor_rango]
-    candidatas = list(dict.fromkeys((league_id, year)
-                                    for _, _, league_id, year in candidatas
-                                    if league_id and year))
-    if len(candidatas) != 1:
-        raise LookupError(
-            f"Liga API-Football ambigua/sin temporada actual para {liga['nombre']}: {candidatas}")
-    return int(candidatas[0][0]), int(candidatas[0][1])
+def _valor_stat_main_league(stats, titulo):
+    valores = [s.get('value', s.get('statValue')) for s in (stats or [])
+               if normalizar_texto(s.get('title')) == normalizar_texto(titulo)]
+    valores = [v for v in valores if v is not None and v != '']
+    if len(valores) != 1:
+        return None
+    try:
+        return int(float(valores[0]))
+    except (TypeError, ValueError):
+        return None
 
 
-def _stats_de_jugador(response, nombre, club, league_id):
-    """Cruza nombre+club+liga y agrega stats si API-Football lista varios equipos."""
-    nombre_key, club_key = normalizar_texto(nombre), normalizar_texto(club)
-    candidatos = []
-    for item in response or []:
-        player = item.get('player') or {}
-        if normalizar_texto(player.get('name')) != nombre_key:
-            continue
-        stats_liga = [s for s in item.get('statistics', [])
-                      if str((s.get('league') or {}).get('id')) == str(league_id)]
-        stats_club = [s for s in stats_liga
-                      if normalizar_texto((s.get('team') or {}).get('name')) == club_key]
-        if stats_club:
-            candidatos.append((player, stats_liga, stats_club))
-    ids = {str(p.get('id')) for p, _, _ in candidatos if p.get('id') is not None}
-    if len(ids) != 1 or not candidatos:
-        return None, 'identidad_api_no_univoca'
+def _posicion_perfil_fotmob(profile, layout):
+    descripcion = profile.get('positionDescription') or {}
+    primary = descripcion.get('primaryPosition') or {}
+    key = primary.get('key')
+    posicion = (FOTMOB_KEY_ETIQUETA.get(key)
+                or FOTMOB_KEY_ETIQUETA.get(str(key).lower()))
+    if not posicion and layout:
+        posicion = posicion_desde_layout(layout.get('x'), layout.get('y'))
+    return posicion
 
-    player = candidatos[0][0]
-    stats_liga = candidatos[0][1]
-    stat_actual = candidatos[0][2][-1]
-    goles, asistencias, partidos = 0, 0, 0
-    hubo_goles, hubo_asist, hubo_partidos = False, False, False
-    for stat in stats_liga:
-        goals = stat.get('goals') or {}
-        games = stat.get('games') or {}
-        if goals.get('total') is not None:
-            goles += int(goals['total'])
-            hubo_goles = True
-        if goals.get('assists') is not None:
-            asistencias += int(goals['assists'])
-            hubo_asist = True
-        if games.get('appearences') is not None:
-            partidos += int(games['appearences'])
-            hubo_partidos = True
 
-    birth_date = ((player.get('birth') or {}).get('date'))
-    position = ((stat_actual.get('games') or {}).get('position'))
+def extraer_stats_perfil_fotmob(profile, fila_totw):
+    """Extrae un único resumen mainLeague que coincida con el TOTW.
+
+    No recorre `firstSeasonStats`: el perfil puede repetir ahí algunos valores.
+    Se usa el resumen principal de la misma liga/temporada del equipo de la fecha.
+    """
+    if not profile:
+        return None, 'perfil_fotmob_ausente'
+    if str(profile.get('id')) != str(fila_totw.get('id_fotmob')):
+        return None, 'id_fotmob_no_coincide'
+
+    main = profile.get('mainLeague') or {}
+    if str(main.get('leagueId')) != str(fila_totw.get('liga_id_fotmob')):
+        return None, 'liga_mainLeague_no_coincide'
+    if str(main.get('season')) != str(fila_totw.get('temporada_fotmob')):
+        return None, 'temporada_mainLeague_no_coincide'
+
+    team = profile.get('primaryTeam') or {}
+    totw_team_id = fila_totw.get('team_id_fotmob')
+    profile_team_id = team.get('id') or team.get('teamId')
+    club = team.get('teamName') or team.get('name') or ''
+    if totw_team_id and profile_team_id:
+        if str(totw_team_id) != str(profile_team_id):
+            return None, 'club_mainLeague_no_coincide'
+    elif normalizar_texto(club) != normalizar_texto(fila_totw.get('club_fotmob')):
+        return None, 'club_mainLeague_no_coincide'
+
+    stats = main.get('stats') or []
+    goles = _valor_stat_main_league(stats, 'Goals')
+    asistencias = _valor_stat_main_league(stats, 'Assists')
+    partidos = _valor_stat_main_league(stats, 'Matches')
+    birth = profile.get('birthDate') or {}
+    edad = _edad_en_fecha({
+        'fecha_nacimiento': birth.get('utcTime'),
+        'edad': profile.get('age'),
+    }, fila_totw['fecha_partido_utc'])
+    posicion = _posicion_perfil_fotmob(profile, fila_totw.get('vertical_layout'))
+    if not posicion or agrupar_posicion(posicion) == 'Arquero':
+        return None, 'posicion_no_soportada_o_arq'
+    if any(v is None for v in (goles, asistencias, edad)):
+        return None, 'feature_requerida_ausente'
+
     return {
-        'player_id_api': player.get('id'),
-        'nombre': player.get('name') or nombre,
-        'edad': player.get('age'),
-        'fecha_nacimiento': birth_date,
-        'goles': goles if hubo_goles else None,
-        'asistencias': asistencias if hubo_asist else None,
-        'partidos_temporada': partidos if hubo_partidos else None,
-        'posicion_api': position,
-        'club_api': (stat_actual.get('team') or {}).get('name', ''),
+        'player_id_fotmob': profile.get('id'),
+        'nombre': profile.get('name') or fila_totw.get('nombre_fotmob'),
+        'club': club or fila_totw.get('club_fotmob'),
+        'posicion': posicion,
+        'edad': edad,
+        'goles': goles,
+        'asistencias': asistencias,
+        'partidos_temporada': partidos,
+        'liga_stats': main.get('leagueName'),
+        'temporada_stats': main.get('season'),
+        'fuente_stats': 'FotMob mainLeague.stats',
     }, None
 
 
@@ -355,70 +339,32 @@ def _edad_en_fecha(stats, fecha):
         return None
 
 
-def resolver_stats_candidato(api_football, nombre, club, league_id, season):
-    if len(normalizar_texto(nombre)) < 4:
-        return None, 'nombre_insuficiente_para_busqueda'
-    payload = api_football.get('players', {
-        'search': nombre, 'league': league_id, 'season': season,
-    }, use_cache=False)
-    errores = payload.get('errors') or {}
-    if errores:
-        texto_error = normalizar_texto(' '.join(str(v) for v in
-                                                (errores.values() if isinstance(errores, dict)
-                                                 else errores)))
-        if 'plan' in texto_error and ('season' in texto_error or 'temporada' in texto_error):
-            return None, 'plan_api_sin_acceso_a_temporada'
-        return None, 'error_respuesta_api_football'
-    response = payload.get('response', [])
-    if not response:
-        return None, 'jugador_sin_resultado_api'
-    return _stats_de_jugador(response, nombre, club, league_id)
-
-
-def enriquecer_y_puntuar(filas_totw, api_football, liga_api_id, season_api, scorer=None):
+def enriquecer_y_puntuar(filas_totw, api_fotmob, scorer=None):
     """Enriquece el TOTW, excluye features desconocidas y puntua una fila/jugador."""
     scorer = scorer or aplicar_modelo
     resueltos, no_resueltos = [], []
-    cache_stats = {}
+    perfiles = {}
     for fila in filas_totw:
-        nombre, club = fila['nombre_fotmob'], fila['club_fotmob']
-        cache_key = (normalizar_texto(nombre), normalizar_texto(club), liga_api_id, season_api)
-        if cache_key not in cache_stats:
+        player_id = fila.get('id_fotmob')
+        if not player_id:
+            no_resueltos.append({**fila, 'motivo_no_puntuado': 'id_fotmob_ausente'})
+            continue
+        if player_id not in perfiles:
             try:
-                cache_stats[cache_key] = resolver_stats_candidato(
-                    api_football, nombre, club, liga_api_id, season_api)
+                profile = api_fotmob.jugador(int(player_id), force_refresh=True)
             except Exception as exc:
-                cache_stats[cache_key] = (None, f'error_api_{type(exc).__name__}')
-        stats, razon = cache_stats[cache_key]
+                perfiles[player_id] = (None, f'error_fotmob_{type(exc).__name__}')
+            else:
+                perfiles[player_id] = (profile, None)
+        profile, error_profile = perfiles[player_id]
+        stats, error_stats = (extraer_stats_perfil_fotmob(profile, fila)
+                              if profile else (None, error_profile or 'perfil_fotmob_ausente'))
         if stats is None:
-            no_resueltos.append({**fila, 'motivo_no_puntuado': razon})
-            continue
-
-        posicion = stats.get('posicion_api')
-        if not posicion:
-            layout = fila.get('vertical_layout') or {}
-            if layout:
-                posicion = posicion_desde_layout(layout.get('x'), layout.get('y'))
-        if not posicion or agrupar_posicion(posicion) == 'Arquero':
-            no_resueltos.append({**fila, 'motivo_no_puntuado': 'posicion_no_soportada_o_arq'})
-            continue
-
-        stats['edad'] = _edad_en_fecha(stats, fila['fecha_partido_utc'])
-        if any(stats.get(c) is None for c in ('edad', 'goles', 'asistencias')):
-            no_resueltos.append({**fila, 'motivo_no_puntuado': 'feature_requerida_ausente'})
+            no_resueltos.append({**fila, 'motivo_no_puntuado': error_stats})
             continue
         resueltos.append({
             **fila,
-            'player_id_api': stats['player_id_api'],
-            'nombre': stats['nombre'],
-            'club': stats['club_api'] or club,
-            'posicion': posicion,
-            'edad': stats['edad'],
-            'goles': stats['goles'],
-            'asistencias': stats['asistencias'],
-            'partidos_temporada': stats['partidos_temporada'],
-            'api_liga_id': liga_api_id,
-            'api_season': season_api,
+            **stats,
         })
 
     if not resueltos:
@@ -430,7 +376,7 @@ def enriquecer_y_puntuar(filas_totw, api_football, liga_api_id, season_api, scor
     df['week_key'] = df['fecha_partido_utc'].map(
         lambda d: f'{d.isocalendar().year}-W{d.isocalendar().week:02d}')
     seleccion = []
-    for _, grupo in df.groupby('player_id_api', sort=False):
+    for _, grupo in df.groupby('player_id_fotmob', sort=False):
         mejor = grupo.sort_values('rating_totw', ascending=False, na_position='last').iloc[0].copy()
         mejor['apariciones_totw_semana'] = len(grupo)
         mejor['ligas_totw_semana'] = ', '.join(sorted(set(grupo['liga'].astype(str))))
@@ -448,8 +394,7 @@ def enriquecer_y_puntuar(filas_totw, api_football, liga_api_id, season_api, scor
     return df_unico, pd.DataFrame(no_resueltos)
 
 
-def generar_ranking_semanal(api_fotmob, api_football, inicio, fin,
-                            ligas=None, scorer=None):
+def generar_ranking_semanal(api_fotmob, inicio, fin, ligas=None, scorer=None):
     inicio_dt, fin_dt = _parse_fecha(inicio), _parse_fecha(fin)
     if inicio_dt is None or fin_dt is None or inicio_dt >= fin_dt:
         raise ValueError('Intervalo semanal invalido')
@@ -466,34 +411,14 @@ def generar_ranking_semanal(api_fotmob, api_football, inicio, fin,
     if not totw_semana:
         return pd.DataFrame(), pd.DataFrame(), avisos
 
-    por_liga = {}
-    for fila in totw_semana:
-        por_liga.setdefault(fila['liga'], []).append(fila)
-
-    rankings, no_resueltos = [], []
-    liga_por_nombre = {l['nombre']: l for l in ligas}
-    for nombre_liga, filas in por_liga.items():
-        liga = liga_por_nombre[nombre_liga]
-        try:
-            league_id, season = resolver_liga_api_football(api_football, liga, inicio_dt)
-        except Exception as e:
-            avisos.append(str(e))
-            no_resueltos.extend({**r, 'motivo_no_puntuado': 'liga_api_no_resuelta'} for r in filas)
-            continue
-        ranking, unmatched = enriquecer_y_puntuar(
-            filas, api_football, league_id, season, scorer=scorer)
-        if not ranking.empty:
-            rankings.append(ranking)
-        if not unmatched.empty:
-            no_resueltos.extend(unmatched.to_dict('records'))
-
-    if not rankings:
-        return pd.DataFrame(), pd.DataFrame(no_resueltos), avisos
-    resultado = pd.concat(rankings, ignore_index=True)
+    resultado, no_resueltos = enriquecer_y_puntuar(
+        totw_semana, api_fotmob, scorer=scorer)
+    if resultado.empty:
+        return resultado, no_resueltos, avisos
     # Si aparece en varias competiciones durante la semana, conserva el mejor
     # score, pero agrega contexto de todas sus apariciones.
     consolidados = []
-    for _, grupo in resultado.groupby('player_id_api', sort=False):
+    for _, grupo in resultado.groupby('player_id_fotmob', sort=False):
         mejor = grupo.sort_values('score_adn_boca', ascending=False).iloc[0].copy()
         mejor['apariciones_totw_semana'] = int(grupo['apariciones_totw_semana'].sum())
         mejor['ligas_totw_semana'] = ', '.join(sorted(
@@ -504,7 +429,7 @@ def generar_ranking_semanal(api_fotmob, api_football, inicio, fin,
     resultado = (pd.DataFrame(consolidados)
                  .sort_values('score_adn_boca', ascending=False).reset_index(drop=True))
     resultado['ranking'] = range(1, len(resultado) + 1)
-    return resultado, pd.DataFrame(no_resueltos), avisos
+    return resultado, no_resueltos, avisos
 
 
 def guardar_resultados(ranking, no_resueltos, inicio, directorio=DATA_DIR):
@@ -522,20 +447,11 @@ def guardar_resultados(ranking, no_resueltos, inicio, directorio=DATA_DIR):
 
 
 def main():
-    from dotenv import load_dotenv
-    from rutas import dir_secrets
-
-    load_dotenv(os.path.join(dir_secrets(), '.env'))
-    api_key = os.getenv('API_KEY')
-    if not api_key:
-        raise RuntimeError('Falta API_KEY en secrets/.env')
-
     inicio, fin = ultimo_bloque_semanal_completo()
     fotmob = FotMobApi()
-    football = ApiFootball(api_key)
     try:
         ranking, no_resueltos, avisos = generar_ranking_semanal(
-            fotmob, football, inicio, fin)
+            fotmob, inicio, fin)
         for aviso in avisos:
             print(f'[aviso] {aviso}')
         if ranking.empty:
@@ -549,7 +465,6 @@ def main():
         return ranking
     finally:
         fotmob.close()
-        football.session.close()
 
 
 if __name__ == '__main__':

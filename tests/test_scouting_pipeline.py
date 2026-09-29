@@ -1,11 +1,10 @@
 from datetime import datetime, timezone
 
 from scouting_pipeline import (
-    _stats_de_jugador,
     enriquecer_y_puntuar,
     extraer_fixtures_semana,
+    extraer_stats_perfil_fotmob,
     generar_ranking_semanal,
-    resolver_stats_candidato,
     seleccionar_rounds,
     ultimo_bloque_semanal_completo,
 )
@@ -32,22 +31,51 @@ def fixture(match_id=910, utc='2026-09-16T20:00:00Z', round_name='Regular Season
     }
 
 
-def api_player_response():
-    return [{
-        'player': {
-            'id': 99, 'name': 'Juan Perez', 'age': 24,
-            'birth': {'date': '2002-04-10'},
+def fila_totw(match_id=910, dia=16, rating=8.7):
+    return {
+        'id_fotmob': 1234,
+        'nombre_fotmob': 'Juan Perez',
+        'team_id_fotmob': '11',
+        'club_fotmob': 'Boca Juniors',
+        'liga': 'Argentina',
+        'liga_id_fotmob': 112,
+        'temporada_fotmob': '2026',
+        'round_id': '5',
+        'match_id_fotmob': match_id,
+        'fecha_partido_utc': datetime(2026, 9, dia, tzinfo=timezone.utc),
+        'rating_totw': rating,
+        'vertical_layout': {'x': 0.5, 'y': 0.9},
+    }
+
+
+def perfil_fotmob(**overrides):
+    profile = {
+        'id': 1234,
+        'name': 'Juan Perez',
+        'birthDate': {'utcTime': '2002-04-10T00:00:00.000Z'},
+        'primaryTeam': {'teamName': 'Boca Juniors'},
+        'positionDescription': {'primaryPosition': {'key': 'striker'}},
+        'mainLeague': {
+            'leagueId': 112,
+            'leagueName': 'Liga Profesional',
+            'season': '2026',
+            'stats': [
+                {'title': 'Goals', 'value': '7'},
+                {'title': 'Assists', 'value': '2'},
+                {'title': 'Matches', 'value': '10'},
+            ],
         },
-        'statistics': [{
-            'team': {'id': 50, 'name': 'Boca Juniors'},
-            'league': {'id': 8, 'name': 'Liga Profesional', 'season': 2026},
-            'games': {'position': 'Forward', 'appearences': 10},
-            'goals': {'total': 7, 'assists': 2},
-        }],
-    }]
+        # Algunos perfiles repiten stats en firstSeasonStats; no deben sumarse.
+        'firstSeasonStats': {'statsSection': {'items': [
+            {'title': 'Goals', 'statValue': '99'},
+            {'title': 'Assists', 'statValue': '88'},
+        ]}},
+    }
+    profile.update(overrides)
+    return profile
 
 
-def test_extrae_solo_fixtures_de_la_semana_y_normaliza_round():
+def test_extrae_fixtures_anidadas_y_normalizadas_solo_de_la_semana():
     payload = {'fixtures': {'allMatches': [
         fixture(),
         fixture(911, '2026-09-21T00:00:00Z', 'Regular Season - 6'),
@@ -65,7 +93,6 @@ def test_extrae_solo_fixtures_de_la_semana_y_normaliza_round():
 
     assert len(result) == 2
     assert {r['match_id'] for r in result} == {910, 913}
-    assert result[0]['match_id'] == 910
     assert result[0]['round_token'] == '5'
     assert result[0]['home_name'] == 'Boca Juniors'
 
@@ -82,45 +109,59 @@ def test_selecciona_rounds_del_fixture_y_excluye_tots():
     assert seleccionar_rounds(rounds, set()) == ['6', '5']
 
 
-def test_cruce_api_exige_nombre_club_y_liga_y_agrega_stats_de_equipos():
-    response = api_player_response()
-    response[0]['statistics'].append({
-        'team': {'id': 51, 'name': 'Club Anterior'},
-        'league': {'id': 8, 'name': 'Liga Profesional', 'season': 2026},
-        'games': {'position': 'Forward', 'appearences': 3},
-        'goals': {'total': 1, 'assists': 1},
-    })
-
-    stats, error = _stats_de_jugador(response, 'Juan Pérez', 'Boca Juniors', 8)
+def test_stats_fotmob_usa_solo_main_league_y_confirma_id_club_liga_temporada():
+    stats, error = extraer_stats_perfil_fotmob(perfil_fotmob(), fila_totw())
 
     assert error is None
-    assert stats['player_id_api'] == 99
-    assert stats['goles'] == 8
-    assert stats['asistencias'] == 3
-    assert stats['partidos_temporada'] == 13
+    assert stats['player_id_fotmob'] == 1234
+    assert stats['club'] == 'Boca Juniors'
+    assert stats['liga_stats'] == 'Liga Profesional'
+    assert stats['temporada_stats'] == '2026'
+    assert stats['goles'] == 7
+    assert stats['asistencias'] == 2
+    assert stats['partidos_temporada'] == 10
+    assert stats['edad'] == 24
+    assert stats['posicion'] == 'Centre-Forward'
 
 
-def test_no_acepta_club_o_liga_ambiguos():
-    stats, error = _stats_de_jugador(api_player_response(), 'Juan Perez', 'Otro Club', 8)
+def test_no_acepta_perfil_de_otra_liga_temporada_club_o_id():
+    casos = [
+        (perfil_fotmob(id=999), fila_totw(), 'id_fotmob_no_coincide'),
+        (perfil_fotmob(mainLeague={'leagueId': 268, 'season': '2026', 'stats': []}),
+         fila_totw(), 'liga_mainLeague_no_coincide'),
+        (perfil_fotmob(mainLeague={'leagueId': 112, 'season': '2025', 'stats': []}),
+         fila_totw(), 'temporada_mainLeague_no_coincide'),
+        (perfil_fotmob(primaryTeam={'id': 99, 'teamName': 'Otro Club'}),
+         fila_totw(), 'club_mainLeague_no_coincide'),
+    ]
+    for profile, totw, esperado in casos:
+        stats, error = extraer_stats_perfil_fotmob(profile, totw)
+        assert stats is None
+        assert error == esperado
+
+
+def test_missing_stats_y_arqueros_no_se_puntuan():
+    missing = perfil_fotmob(mainLeague={
+        'leagueId': 112, 'leagueName': 'Liga Profesional', 'season': '2026',
+        'stats': [{'title': 'Goals', 'value': '0'}],
+    })
+    stats, error = extraer_stats_perfil_fotmob(missing, fila_totw())
     assert stats is None
-    assert error == 'identidad_api_no_univoca'
+    assert error == 'feature_requerida_ausente'
 
-
-def test_identifica_limite_de_plan_en_stats_api():
-    class ApiPlanLimitado:
-        def get(self, endpoint, params, use_cache=True):
-            assert endpoint == 'players'
-            assert not use_cache
-            return {'errors': {'plan': 'Free plans do not have access to this season'}}
-
-    stats, error = resolver_stats_candidato(
-        ApiPlanLimitado(), 'Juan Perez', 'Boca Juniors', 8, 2026)
-
+    goalkeeper = perfil_fotmob(positionDescription={
+        'primaryPosition': {'key': 'keeper'}})
+    stats, error = extraer_stats_perfil_fotmob(goalkeeper, fila_totw())
     assert stats is None
-    assert error == 'plan_api_sin_acceso_a_temporada'
+    assert error == 'posicion_no_soportada_o_arq'
 
 
 class FotMobFalso:
+    def __init__(self, perfil=None, filas=None):
+        self.perfil = perfil or perfil_fotmob()
+        self.filas = filas or [fila_totw()]
+        self.perfiles_consultados = []
+
     def temporada_actual(self, league_id, force_refresh=False):
         assert force_refresh
         return '2026'
@@ -144,26 +185,14 @@ class FotMobFalso:
             'verticalLayout': {'x': 0.5, 'y': 0.9},
         }]
 
-
-class ApiFootballFalsa:
-    def get(self, endpoint, params, use_cache=True):
-        assert not use_cache
-        if endpoint == 'leagues':
-            return {'response': [{
-                'league': {'id': 8, 'name': 'Liga Profesional'},
-                'country': {'name': 'Argentina', 'code': 'ARG'},
-                'seasons': [{'year': 2026, 'current': True}],
-            }]}
-        if endpoint == 'players':
-            return {'response': api_player_response()}
-        raise AssertionError(f'endpoint no esperado: {endpoint}')
+    def jugador(self, player_id, force_refresh=False):
+        assert force_refresh
+        self.perfiles_consultados.append(player_id)
+        return self.perfil
 
 
-def test_pipeline_inyectable_ordena_por_score_sin_red_ni_sqlite():
-    liga = {
-        'nombre': 'Argentina', 'fotmob_id': 112,
-        'api_country': 'Argentina', 'api_league_search': 'Liga Profesional',
-    }
+def test_pipeline_puntua_con_perfil_fotmob_sin_red_ni_sqlite():
+    liga = {'nombre': 'Argentina', 'fotmob_id': 112}
 
     def scorer(features):
         assert list(features.columns) == ['goles', 'asistencias', 'edad', 'posicion']
@@ -171,9 +200,9 @@ def test_pipeline_inyectable_ordena_por_score_sin_red_ni_sqlite():
         out['probabilidad'] = [0.81] * len(out)
         return out
 
+    fotmob = FotMobFalso()
     ranking, unmatched, avisos = generar_ranking_semanal(
-        FotMobFalso(), ApiFootballFalsa(), SEMANA_INICIO, SEMANA_FIN,
-        ligas=[liga], scorer=scorer)
+        fotmob, SEMANA_INICIO, SEMANA_FIN, ligas=[liga], scorer=scorer)
 
     assert avisos == []
     assert unmatched.empty
@@ -181,66 +210,40 @@ def test_pipeline_inyectable_ordena_por_score_sin_red_ni_sqlite():
     assert ranking.iloc[0]['score_adn_boca'] == 0.81
     assert ranking.iloc[0]['goles'] == 7
     assert ranking.iloc[0]['club'] == 'Boca Juniors'
+    assert fotmob.perfiles_consultados == [1234]
 
 
-def test_no_puntua_stats_ausentes_como_si_fueran_cero():
-    response = api_player_response()
-    response[0]['statistics'][0]['goals'] = {'total': None, 'assists': 2}
-    stats, _ = _stats_de_jugador(response, 'Juan Perez', 'Boca Juniors', 8)
-    assert stats['goles'] is None
+def test_missing_stats_profile_queda_no_resuelto_sin_asignar_cero():
+    profile = perfil_fotmob(mainLeague={
+        'leagueId': 112, 'leagueName': 'Liga Profesional', 'season': '2026',
+        'stats': [{'title': 'Assists', 'value': '2'}],
+    })
 
-
-def test_stats_ausentes_quedan_en_no_resueltos_y_no_llegan_al_modelo():
-    response = api_player_response()
-    response[0]['statistics'][0]['goals'] = {'total': None, 'assists': 2}
-
-    class ApiSinGoles:
-        def get(self, endpoint, params, use_cache=True):
-            assert not use_cache
-            return {'response': response}
-
-    fila = {
-        'id_fotmob': 1234, 'nombre_fotmob': 'Juan Perez',
-        'club_fotmob': 'Boca Juniors', 'liga': 'Argentina',
-        'liga_id_fotmob': 112, 'temporada_fotmob': '2026',
-        'round_id': '5', 'match_id_fotmob': 910,
-        'fecha_partido_utc': datetime(2026, 9, 16, tzinfo=timezone.utc),
-        'rating_totw': 8.7, 'vertical_layout': {'x': 0.5, 'y': 0.9},
-    }
+    def scorer(_):
+        raise AssertionError('no debe puntuar features incompletas')
 
     ranking, unmatched = enriquecer_y_puntuar(
-        [fila], ApiSinGoles(), 8, 2026,
-        scorer=lambda _: (_ for _ in ()).throw(AssertionError('no debe puntuar')))
+        [fila_totw()], FotMobFalso(perfil=profile), scorer=scorer)
 
     assert ranking.empty
     assert unmatched.iloc[0]['motivo_no_puntuado'] == 'feature_requerida_ausente'
 
 
-def test_deduplica_jugador_repetido_en_la_semana_y_guarda_apariciones():
-    class Api:
-        def get(self, endpoint, params, use_cache=True):
-            assert not use_cache
-            return {'response': api_player_response()}
-
-    filas = []
-    for match_id, day, rating in [(910, 16, 8.7), (911, 19, 9.1)]:
-        filas.append({
-            'id_fotmob': 1234, 'nombre_fotmob': 'Juan Perez',
-            'club_fotmob': 'Boca Juniors', 'liga': 'Argentina',
-            'liga_id_fotmob': 112, 'temporada_fotmob': '2026',
-            'round_id': str(match_id), 'match_id_fotmob': match_id,
-            'fecha_partido_utc': datetime(2026, 9, day, tzinfo=timezone.utc),
-            'rating_totw': rating, 'vertical_layout': {'x': 0.5, 'y': 0.9},
-        })
+def test_deduplica_jugador_repetido_y_consulta_perfil_una_vez():
+    filas = [fila_totw(910, dia=16, rating=8.7),
+             fila_totw(911, dia=19, rating=9.1)]
 
     def scorer(features):
+        assert len(features) == 1
         out = features.copy()
         out['probabilidad'] = [0.9]
         return out
 
-    ranking, unmatched = enriquecer_y_puntuar(filas, Api(), 8, 2026, scorer=scorer)
+    fotmob = FotMobFalso(filas=filas)
+    ranking, unmatched = enriquecer_y_puntuar(filas, fotmob, scorer=scorer)
 
     assert unmatched.empty
     assert len(ranking) == 1
     assert ranking.iloc[0]['apariciones_totw_semana'] == 2
     assert ranking.iloc[0]['rating_totw'] == 9.1
+    assert fotmob.perfiles_consultados == [1234]

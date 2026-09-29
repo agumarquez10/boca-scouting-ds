@@ -8,7 +8,7 @@ ADN Boca; el siguiente objetivo es sumar sentimiento real y publicar el top 5.
 
 ```
 FotMob Team of the Week + fixtures ─┐
-API-Football (stats de liga/temporada)├─► scouting_pipeline.py ─► ranking_jugadores_fecha_YYYY-Www.csv
+FotMob profile (mainLeague.stats) ───├─► scouting_pipeline.py ─► ranking_jugadores_fecha_YYYY-Www.csv
 modelo L1 + scaler + encoder ─────────┘                                  │
                                                                          ├─► sentimiento real (pendiente)
                                                                          └─► automatización/tweet (pendiente)
@@ -31,14 +31,13 @@ python src/scouting_pipeline.py
 python src/automatizacion.py
 ```
 
-El pipeline semanal requiere `API_KEY` en `secrets/.env`. Al ejecutarlo hace
-llamadas a FotMob/API-Football, refresca la caché `api_cache` de FotMob en SQLite
-y guarda el ranking y un CSV separado de jugadores no resueltos. Las consultas
-de stats a API-Football evitan su caché permanente para no reciclar datos de una
-semana anterior. Usa los datos de temporada vigentes al momento de captura: no
-hacer backfill histórico con stats finales de temporada, porque incorporarían
-partidos posteriores al TOTW. Antes de producción hay que verificar cuota y
-presupuesto de llamadas.
+El pipeline semanal no requiere `API_KEY`: refresca fixtures/TOTW y perfiles
+FotMob, actualiza la caché `api_cache` de SQLite y guarda el ranking y un CSV
+separado de jugadores no resueltos. Goles/asistencias se leen de `mainLeague.stats`
+y se validan contra ID, club, liga y temporada del TOTW. Dos perfiles argentinos
+entregaron stats actuales y pasaron una inferencia L1 offline; falta validar
+cobertura en las otras ligas. No hacer backfill con perfiles actuales para fechas
+históricas: sus totales pueden incluir partidos posteriores a esa fecha.
 
 Los notebooks activos se ejecutan con kernel Python 3 desde Jupyter (`python -m
 jupyter notebook`). `src/model_training.ipynb` es legado: no ejecutarlo para
@@ -103,11 +102,10 @@ Credenciales en `secrets/.env` (no versionado; ver `.env.example`).
 
 - [x] EDA con esquema nuevo (incl. correlaciones por posición)
 - [x] Esquema de 9 features y validación temporal por jugador de L1/RF
-- [x] MVP offline del radar semanal TOTW → stats API-Football → ranking del modelo
-- [ ] Completar validación live: FotMob devolvió los TOTW de Argentina, pero API-Football Free rechazó stats 2026
+- [x] MVP offline del radar semanal TOTW → stats de perfil FotMob → ranking del modelo
+- [ ] Validar cobertura live de stats en Brasil, México y MLS; Argentina probada con 2 perfiles
 - [x] NLP de sentimiento con fallback a placeholders
 - [x] Script de automatización local; integración con `ranking_jugadores_fecha` pendiente
-- [ ] Habilitar una fuente/plan con estadísticas de temporada 2026 en API-Football
 - [ ] Revocar credenciales antiguas que quedaron en el historial git (la clave actual ya está configurada)
 - [ ] Activar scrape real de Reddit (app tipo *script*; hoy 401 → placeholders)
 - [ ] Publicar tweet real (faltan credenciales OAuth 1.0a; hoy se escribe

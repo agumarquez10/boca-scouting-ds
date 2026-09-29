@@ -2,8 +2,8 @@
 Extractor legacy de perfil/trayectoria desde FotMob para el TOTW historico.
 
 No entrega goles/asistencias y no alimenta directamente el modelo vigente de
-9 features. El radar semanal obtiene estadisticas por jugador/temporada desde
-API-Football en `scouting_pipeline.py`.
+9 features. El radar semanal lee el resumen `mainLeague.stats` del perfil en
+`scouting_pipeline.py`.
 
 El antiguo flujo de scoring esperaba:
   pases_precisos, edad, temporadas_en_dataset, partidos_por_temporada,

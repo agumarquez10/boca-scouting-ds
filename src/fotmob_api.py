@@ -119,8 +119,8 @@ class FotMobApi:
     def temporada_actual(self, league_id, force_refresh=False):
         return self._llamar('current_season', league_id, force_refresh=force_refresh)
 
-    def jugador(self, player_id):
-        return self._llamar('player', player_id)
+    def jugador(self, player_id, force_refresh=False):
+        return self._llamar('player', player_id, force_refresh=force_refresh)
 
     def equipo(self, team_id, ccode3=''):
         """Devuelve el perfil de un equipo. `ccode3` opcional (si se conoce)."""

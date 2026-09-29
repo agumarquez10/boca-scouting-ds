@@ -11,8 +11,6 @@ LIGAS_FOTMOB = [
     {
         'nombre': 'Argentina',
         'fotmob_id': 112,
-        'api_country': 'Argentina',
-        'api_league_search': 'Liga Profesional Argentina',
         'temporadas_totw': ['2024'],
         'skip': False,
         'razon_skip': '',
@@ -20,8 +18,6 @@ LIGAS_FOTMOB = [
     {
         'nombre': 'Brasil',
         'fotmob_id': 268,
-        'api_country': 'Brazil',
-        'api_league_search': 'Serie A',
         'temporadas_totw': ['2024'],
         'skip': False,
         'razon_skip': '',
@@ -29,8 +25,6 @@ LIGAS_FOTMOB = [
     {
         'nombre': 'Mexico',
         'fotmob_id': 230,
-        'api_country': 'Mexico',
-        'api_league_search': 'Liga MX',
         'temporadas_totw': ['2024/2025 - Apertura', '2024/2025 - Clausura'],
         'skip': False,
         'razon_skip': '',
@@ -38,8 +32,6 @@ LIGAS_FOTMOB = [
     {
         'nombre': 'USA (MLS)',
         'fotmob_id': 130,
-        'api_country': 'USA',
-        'api_league_search': 'Major League Soccer',
         'temporadas_totw': ['2025'],
         'skip': False,
         'razon_skip': '',
