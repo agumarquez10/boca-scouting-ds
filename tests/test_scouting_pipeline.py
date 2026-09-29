@@ -3,10 +3,12 @@ from datetime import datetime, timezone
 from scouting_pipeline import (
     enriquecer_y_puntuar,
     extraer_fixtures_semana,
-    extraer_stats_perfil_fotmob,
+    extraer_stats_temporada_fotmob,
     generar_ranking_semanal,
     seleccionar_rounds,
+    torneos_de_temporada,
     ultimo_bloque_semanal_completo,
+    _es_torneo_seleccion,
 )
 
 
@@ -48,6 +50,16 @@ def fila_totw(match_id=910, dia=16, rating=8.7):
     }
 
 
+def stats_payload(goles, asistencias, partidos=None):
+    items = [
+        {'title': 'Goals', 'statValue': str(goles)},
+        {'title': 'Assists', 'statValue': str(asistencias)},
+    ]
+    if partidos is not None:
+        items.append({'title': 'Matches', 'statValue': str(partidos)})
+    return {'topStatCard': {'items': items}}
+
+
 def perfil_fotmob(**overrides):
     profile = {
         'id': 1234,
@@ -65,7 +77,16 @@ def perfil_fotmob(**overrides):
                 {'title': 'Matches', 'value': '10'},
             ],
         },
-        # Algunos perfiles repiten stats en firstSeasonStats; no deben sumarse.
+        'statSeasons': [{
+            'seasonName': '2026',
+            'tournaments': [
+                {'name': 'Liga Profesional', 'tournamentId': 112, 'entryId': '0-0'},
+                {'name': 'Copa Argentina', 'tournamentId': 9305, 'entryId': '0-1'},
+                {'name': 'World Cup CONMEBOL qualification',
+                 'tournamentId': 10199, 'entryId': '0-2'},
+            ],
+        }],
+        # Trampa: valores repetidos en otra seccion no deben sumarse.
         'firstSeasonStats': {'statsSection': {'items': [
             {'title': 'Goals', 'statValue': '99'},
             {'title': 'Assists', 'statValue': '88'},
@@ -73,6 +94,28 @@ def perfil_fotmob(**overrides):
     }
     profile.update(overrides)
     return profile
+
+
+class ApiFalso:
+    def __init__(self, perfil=None, stats_por_entry=None):
+        self.perfil = perfil if perfil is not None else perfil_fotmob()
+        self.stats_por_entry = stats_por_entry or {
+            '0-0': stats_payload(7, 2, 10),
+            '0-1': stats_payload(0, 0, 2),
+        }
+        self.llamadas_stats = []
+
+    def jugador(self, player_id, force_refresh=False):
+        assert force_refresh
+        return self.perfil
+
+    def stats_torneo(self, player_id, season_id, force_refresh=False):
+        assert force_refresh
+        assert player_id == 1234
+        self.llamadas_stats.append(season_id)
+        if season_id not in self.stats_por_entry:
+            raise KeyError(season_id)
+        return self.stats_por_entry[season_id]
 
 
 def test_extrae_fixtures_anidadas_y_normalizadas_solo_de_la_semana():
@@ -109,22 +152,39 @@ def test_selecciona_rounds_del_fixture_y_excluye_tots():
     assert seleccionar_rounds(rounds, set()) == ['6', '5']
 
 
-def test_stats_fotmob_usa_solo_main_league_y_confirma_id_club_liga_temporada():
-    stats, error = extraer_stats_perfil_fotmob(perfil_fotmob(), fila_totw())
+def test_filtro_selecciones_y_mundial_de_clubes_incluido():
+    assert _es_torneo_seleccion('World Cup CONMEBOL qualification')
+    assert _es_torneo_seleccion('Copa América')
+    assert _es_torneo_seleccion('Sudamericano Sub-20')
+    assert not _es_torneo_seleccion('FIFA Club World Cup')
+    assert not _es_torneo_seleccion('Copa Libertadores')
+
+
+def test_torneos_de_temporada_filtra_selecciones():
+    torneos = torneos_de_temporada(perfil_fotmob(), '2026')
+    assert [t['entryId'] for t in torneos] == ['0-0', '0-1']
+    assert torneos_de_temporada(perfil_fotmob(), '2025') is None
+
+
+def test_suma_todos_los_torneos_club_sin_llamar_a_selecciones():
+    api = ApiFalso()
+    stats, error = extraer_stats_temporada_fotmob(perfil_fotmob(), fila_totw(), api)
 
     assert error is None
     assert stats['player_id_fotmob'] == 1234
-    assert stats['club'] == 'Boca Juniors'
-    assert stats['liga_stats'] == 'Liga Profesional'
-    assert stats['temporada_stats'] == '2026'
     assert stats['goles'] == 7
     assert stats['asistencias'] == 2
-    assert stats['partidos_temporada'] == 10
+    assert stats['partidos_temporada'] == 12
+    assert stats['torneos_stats'] == 'Liga Profesional, Copa Argentina'
+    assert stats['torneos_sin_matches'] == 0
     assert stats['edad'] == 24
     assert stats['posicion'] == 'Centre-Forward'
+    assert stats['fuente_stats'] == 'FotMob playerStats (todos los torneos de club)'
+    assert api.llamadas_stats == ['0-0', '0-1']
 
 
-def test_no_acepta_perfil_de_otra_liga_temporada_club_o_id():
+def test_no_acepta_perfil_de_otra_liga_temporada_club_o_id_sin_llamar_stats():
+    api = ApiFalso()
     casos = [
         (perfil_fotmob(id=999), fila_totw(), 'id_fotmob_no_coincide'),
         (perfil_fotmob(mainLeague={'leagueId': 268, 'season': '2026', 'stats': []}),
@@ -135,31 +195,52 @@ def test_no_acepta_perfil_de_otra_liga_temporada_club_o_id():
          fila_totw(), 'club_mainLeague_no_coincide'),
     ]
     for profile, totw, esperado in casos:
-        stats, error = extraer_stats_perfil_fotmob(profile, totw)
+        stats, error = extraer_stats_temporada_fotmob(profile, totw, api)
         assert stats is None
         assert error == esperado
+    assert api.llamadas_stats == []
 
 
-def test_missing_stats_y_arqueros_no_se_puntuan():
-    missing = perfil_fotmob(mainLeague={
-        'leagueId': 112, 'leagueName': 'Liga Profesional', 'season': '2026',
-        'stats': [{'title': 'Goals', 'value': '0'}],
+def test_torneo_sin_goles_o_temporada_ausente_no_se_puntua():
+    api = ApiFalso(stats_por_entry={
+        '0-0': stats_payload(None, 2, 10),
+        '0-1': stats_payload(0, 0, 2),
     })
-    stats, error = extraer_stats_perfil_fotmob(missing, fila_totw())
+    stats, error = extraer_stats_temporada_fotmob(perfil_fotmob(), fila_totw(), api)
     assert stats is None
-    assert error == 'feature_requerida_ausente'
+    assert error == 'stats_torneo_incompleto'
 
+    perfil_sin_temporada = perfil_fotmob(statSeasons=[
+        {'seasonName': '2025', 'tournaments': [
+            {'name': 'Liga Profesional', 'tournamentId': 112, 'entryId': '0-0'}]}])
+    stats, error = extraer_stats_temporada_fotmob(perfil_sin_temporada, fila_totw(), api)
+    assert stats is None
+    assert error == 'temporada_stats_ausente'
+
+    perfil_solo_seleccion = perfil_fotmob(statSeasons=[{
+        'seasonName': '2026',
+        'tournaments': [{'name': 'World Cup', 'tournamentId': 77, 'entryId': '0-0'}]}])
+    stats, error = extraer_stats_temporada_fotmob(perfil_solo_seleccion, fila_totw(), api)
+    assert stats is None
+    assert error == 'sin_torneos_club_en_temporada'
+
+
+def test_arquero_y_edad_ausente_no_se_puntuan():
     goalkeeper = perfil_fotmob(positionDescription={
         'primaryPosition': {'key': 'keeper'}})
-    stats, error = extraer_stats_perfil_fotmob(goalkeeper, fila_totw())
+    stats, error = extraer_stats_temporada_fotmob(goalkeeper, fila_totw(), ApiFalso())
     assert stats is None
     assert error == 'posicion_no_soportada_o_arq'
 
+    sin_nacimiento = perfil_fotmob(birthDate={}, age=None)
+    stats, error = extraer_stats_temporada_fotmob(sin_nacimiento, fila_totw(), ApiFalso())
+    assert stats is None
+    assert error == 'feature_requerida_ausente'
 
-class FotMobFalso:
-    def __init__(self, perfil=None, filas=None):
-        self.perfil = perfil or perfil_fotmob()
-        self.filas = filas or [fila_totw()]
+
+class FotMobFalso(ApiFalso):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.perfiles_consultados = []
 
     def temporada_actual(self, league_id, force_refresh=False):
@@ -191,7 +272,7 @@ class FotMobFalso:
         return self.perfil
 
 
-def test_pipeline_puntua_con_perfil_fotmob_sin_red_ni_sqlite():
+def test_pipeline_puntua_con_stats_por_torneo_sin_red_ni_sqlite():
     liga = {'nombre': 'Argentina', 'fotmob_id': 112}
 
     def scorer(features):
@@ -211,22 +292,22 @@ def test_pipeline_puntua_con_perfil_fotmob_sin_red_ni_sqlite():
     assert ranking.iloc[0]['goles'] == 7
     assert ranking.iloc[0]['club'] == 'Boca Juniors'
     assert fotmob.perfiles_consultados == [1234]
+    assert fotmob.llamadas_stats == ['0-0', '0-1']
 
 
-def test_missing_stats_profile_queda_no_resuelto_sin_asignar_cero():
-    profile = perfil_fotmob(mainLeague={
-        'leagueId': 112, 'leagueName': 'Liga Profesional', 'season': '2026',
-        'stats': [{'title': 'Assists', 'value': '2'}],
-    })
-
+def test_stats_incompletas_quedan_no_resueltas_sin_asignar_cero():
     def scorer(_):
         raise AssertionError('no debe puntuar features incompletas')
 
+    fotmob = FotMobFalso(stats_por_entry={
+        '0-0': stats_payload(7, None, 10),
+        '0-1': stats_payload(0, 0, 2),
+    })
     ranking, unmatched = enriquecer_y_puntuar(
-        [fila_totw()], FotMobFalso(perfil=profile), scorer=scorer)
+        [fila_totw()], fotmob, scorer=scorer)
 
     assert ranking.empty
-    assert unmatched.iloc[0]['motivo_no_puntuado'] == 'feature_requerida_ausente'
+    assert unmatched.iloc[0]['motivo_no_puntuado'] == 'stats_torneo_incompleto'
 
 
 def test_deduplica_jugador_repetido_y_consulta_perfil_una_vez():
@@ -239,7 +320,7 @@ def test_deduplica_jugador_repetido_y_consulta_perfil_una_vez():
         out['probabilidad'] = [0.9]
         return out
 
-    fotmob = FotMobFalso(filas=filas)
+    fotmob = FotMobFalso()
     ranking, unmatched = enriquecer_y_puntuar(filas, fotmob, scorer=scorer)
 
     assert unmatched.empty

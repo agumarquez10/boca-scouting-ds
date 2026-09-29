@@ -23,10 +23,11 @@ competiciones y medir el sentimiento de la hinchada.
   conserva un flujo legado y no es fuente de artefactos. La selección del clasificador debe
   basarse en validación temporal y métricas
   de ranking, no quedar codificada como una decisión permanente en estas instrucciones.
-  `src/scouting_pipeline.py` contiene un MVP semanal FotMob TOTW → perfil FotMob
-  (`mainLeague.stats`) → ranking. Se comprobaron 2 perfiles de Argentina; falta validar
-  cobertura live de todas las ligas activas. También faltan NLP/sentimiento real y la
-  integración de la automatización semanal + tweet con el nuevo ranking.
+  `src/scouting_pipeline.py` contiene un MVP semanal FotMob TOTW → stats por torneo
+  (`playerStats`, todos los torneos de club de la temporada, alineado con el alcance
+  del entrenamiento que incluye copas) → ranking. Se comprobaron 2 perfiles de Argentina;
+  falta validar cobertura live de todas las ligas activas. También faltan NLP/sentimiento
+  real y la integración de la automatización semanal + tweet con el nuevo ranking.
 
 ## Datos (fuente de verdad)
 - data/adn_boca_real_features.csv → features principal (795 × 14). NO tiene rating (evita leakage).

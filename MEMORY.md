@@ -6,30 +6,35 @@
 - Objetivo: ranking semanal de jugadores de los TOTW de varias ligas; sentimiento real y tweet siguen pendientes.
 - Modelo principal actual: Logistic L1 (`penalty='l1'`, `solver='saga'`), esquema de 9 features: goles, asistencias, edad y dummies de posición.
 - Etiquetas manuales; `rating` y derivados no son features. CV/OOF agrupado por jugador y test temporal.
-- `src/scouting_pipeline.py` usa TOTW/fixtures y perfiles FotMob (`mainLeague.stats`); genera ranking y archivo de no resueltos por semana ISO UTC.
-- FotMob se probó en Argentina con Salvio y Ronaldo Martínez; ambos perfiles tenían stats 2026 y pasaron una inferencia offline L1.
-- Esa prueba no valida cobertura de todas las ligas ni reemplaza una validación completa del ranking semanal.
-- Tests: 17 pasaron en la última corrida. EDA: 39 celdas, validado.
+- `src/scouting_pipeline.py`: semana ISO UTC → fixtures/TOTW FotMob → suma de `playerStats` por torneo de CLUB de la temporada → L1 → ranking + no resueltos.
+- Alcance verificado: entrenamiento incluye copas/continental (partidos > 38 por temporada); `mainLeague` de FotMob es solo liga, por eso se suman todos los torneos club.
+- Smoke de Argentina (live): Salvio 2G/6A en 5 torneos (36 PJ, Recopa sin Matches marcada); Ronaldo 8G/2A (Copa sumó 1 asistencia). 2/2 puntuados.
+- Tests: 20 pasaron en la última corrida. EDA: 39 celdas, validado.
 - `model_training.ipynb` es legado; no usar para producir artefactos. La automatización aún consume el formato antiguo.
 
 ## 2. Decisiones tomadas y por qué
-- L1 se priorizó para ranking por resultados temporales recientes en AUPRC/top-N; la elección puede cambiar con nueva evidencia.
-- Usar stats FotMob junto al TOTW evita el límite de API-Football Free en temporadas 2026 y permite reutilizar IDs del mismo proveedor.
-- Enriquecer con `mainLeague.stats`, validando ID, club, liga y temporada; no cruzar proveedores por nombre solamente.
-- Mantener FotMob como fuente actual es una decisión práctica para el MVP, no una regla permanente de `AGENTS.md`.
-- El score ordena candidatos TOTW; no es una probabilidad calibrada para todo el mercado.
+- L1 se priorizó para ranking por resultados temporales recientes en AUPRC/top-N; puede cambiar con nueva evidencia.
+- Alinear inferencia con entrenamiento sumando todos los torneos de club: con `mainLeague` solo-liga se subestimarían a los que juegan copas.
+- Excluir selecciones de la suma por heurística de nombre (entrenamiento es por club); heurística temporal, no regla permanente.
+- Torneo club sin goles/asistencias → jugador sin score (faltante ≠ cero); sin `Matches` solo marca auditoría (`torneos_sin_matches`).
+- `playerStats` se llama con `requests` directo porque la librería `fotmob` devuelve `null` en ese endpoint (cache igual que el resto).
+- El score ordena candidatos TOTW; no es probabilidad calibrada. FotMob como fuente es decisión práctica, no fijada en `AGENTS.md`.
 
 ## 3. Aprendizajes y errores a evitar
 - Las features históricas son por jugador-temporada: no usar goles/asistencias de un solo partido.
-- Confirmar si los datos de entrenamiento incluyen solo liga o también copas/fases; no mezclar alcances.
-- No convertir estadísticas faltantes en cero ni puntuar perfiles con liga/club/temporada incompatibles.
-- No usar stats finales actuales para backfill histórico: incluirían partidos futuros respecto del TOTW.
-- No usar `rating` como feature, no mezclar temporadas del mismo jugador entre folds y no reportar P@10 de filas repetidas como 10 jugadores únicos.
-- API-Football Free rechazó stats 2026; Highlightly no devolvió stats por competición para Ronaldo; Promiedos no está verificado para cobertura completa por jugador.
+- No confundir `mainLeague` con "temporada completa": en Argentina suma Apertura/Clausura/playoffs pero excluye copas.
+- No convertir faltantes en cero, no puntuar perfiles con liga/club/temporada incompatibles.
+- No usar stats actuales para backfill histórico: incluirían partidos futuros respecto del TOTW.
+- No usar `rating` como feature, no mezclar temporadas del mismo jugador entre folds, no reportar P@10 de filas repetidas como 10 jugadores únicos.
+- API-Football Free rechazó stats 2026; Highlightly y Promiedos no mostraron cobertura completa; siguen fuera del flujo.
 - El uso live de FotMob refresca `api_cache` en SQLite; pedir aprobación antes de nuevas consultas/escrituras.
 
 ## 4. Próximos pasos
-1. Alinear el alcance de `mainLeague.stats` con las estadísticas de entrenamiento.
-2. Validar en Brasil, México y MLS: cobertura, matching, no resueltos y cuota/caché.
+1. Validar en Brasil, México y MLS: cobertura, suma de torneos, selecciones, matching y no resueltos.
+2. Revisar cuota/caché con un ranking semanal completo y decidir si conviene un solo CSV por semana.
 3. Integrar sentimiento real solo después de estabilizar el ranking.
 4. Adaptar automatización y tweet para leer el nuevo CSV semanal.
+
+## Estado Git observado
+- Último commit: `0eb58fc actualizacion AGENTS.md + agrego MEMORY.md`.
+- Locales sin commit: `AGENTS.md`, `README.md`, `src/fotmob_api.py`, `src/scouting_pipeline.py`, `tests/test_scouting_pipeline.py`.

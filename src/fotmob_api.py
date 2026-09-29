@@ -70,37 +70,29 @@ class FotMobApi:
     def _clave(tipo, *args):
         return _PREFIX + tipo + '|' + '|'.join(str(a) for a in args)
 
+    _METODOS = {
+        'rounds': 'totw_rounds',
+        'totw': 'totw',
+        'fixtures': 'get_league_fixtures',
+        'current_season': 'get_league_current_season',
+        'player': 'get_player',
+        'team': 'get_team',
+    }
+
     def _llamar(self, tipo, *args, force_refresh=False):
+        if tipo not in self._METODOS:
+            raise ValueError(f'tipo desconocido: {tipo}')
         clave = self._clave(tipo, *args)
         valor = None if force_refresh else _get_cache(clave)
         if valor is not None:
             return valor
-        coro = None
-        if tipo == 'rounds':
-            coro = self._client.totw_rounds(*args)
-        elif tipo == 'totw':
-            coro = self._client.totw(*args)
-        elif tipo == 'fixtures':
-            coro = self._client.get_league_fixtures(*args)
-        elif tipo == 'current_season':
-            coro = self._client.get_league_current_season(*args)
-        elif tipo == 'player':
-            coro = self._client.get_player(*args)
-        elif tipo == 'team':
-            coro = self._client.get_team(*args)
-        else:
-            raise ValueError(f'tipo desconocido: {tipo}')
+        coro = getattr(self._client, self._METODOS[tipo])(*args)
         try:
             valor = self._loop.run_until_complete(coro)
         except RuntimeError:
             self._loop = asyncio.new_event_loop()
             self._client = self._FotMob()
-            coro = self._client.totw_rounds(*args) if tipo == 'rounds' \
-                else self._client.totw(*args) if tipo == 'totw' \
-                else self._client.get_league_fixtures(*args) if tipo == 'fixtures' \
-                else self._client.get_league_current_season(*args) if tipo == 'current_season' \
-                else self._client.get_player(*args) if tipo == 'player' \
-                else self._client.get_team(*args)
+            coro = getattr(self._client, self._METODOS[tipo])(*args)
             valor = self._loop.run_until_complete(coro)
         self._reales += 1
         if valor is not None:
@@ -121,6 +113,32 @@ class FotMobApi:
 
     def jugador(self, player_id, force_refresh=False):
         return self._llamar('player', player_id, force_refresh=force_refresh)
+
+    def stats_torneo(self, player_id, season_id, force_refresh=False):
+        """Stats de UN jugador en UN torneo (`season_id` tipo '0-0' del perfil).
+
+        Se llama directo con requests porque el wrapper async de la libreria
+        devuelve None para este endpoint. Cache con la misma clave por jugador
+        y torneo; `force_refresh` la refresca semanalmente.
+        """
+        import requests
+
+        clave = self._clave('stats', player_id, season_id)
+        if not force_refresh:
+            cached = _get_cache(clave)
+            if cached is not None:
+                return cached
+        url = 'https://www.fotmob.com/api/data/playerStats'
+        r = requests.get(url, params={
+            'playerId': player_id, 'seasonId': season_id,
+            'isFirstSeason': 'false',
+        }, headers={'User-Agent': 'Mozilla/5.0'}, timeout=30)
+        r.raise_for_status()
+        valor = r.json()
+        self._reales += 1
+        if valor is not None:
+            _set_cache(clave, valor)
+        return valor
 
     def equipo(self, team_id, ccode3=''):
         """Devuelve el perfil de un equipo. `ccode3` opcional (si se conoce)."""

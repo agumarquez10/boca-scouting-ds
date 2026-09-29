@@ -248,18 +248,6 @@ def recolectar_totw_semana(api_fotmob, liga, inicio, fin):
     return filas, avisos
 
 
-def _valor_stat_main_league(stats, titulo):
-    valores = [s.get('value', s.get('statValue')) for s in (stats or [])
-               if normalizar_texto(s.get('title')) == normalizar_texto(titulo)]
-    valores = [v for v in valores if v is not None and v != '']
-    if len(valores) != 1:
-        return None
-    try:
-        return int(float(valores[0]))
-    except (TypeError, ValueError):
-        return None
-
-
 def _posicion_perfil_fotmob(profile, layout):
     descripcion = profile.get('positionDescription') or {}
     primary = descripcion.get('primaryPosition') or {}
@@ -271,11 +259,63 @@ def _posicion_perfil_fotmob(profile, layout):
     return posicion
 
 
-def extraer_stats_perfil_fotmob(profile, fila_totw):
-    """Extrae un único resumen mainLeague que coincida con el TOTW.
+def _es_torneo_seleccion(nombre):
+    """Heuristica: torneos de selecciones nacionales (clubes no entren en train)."""
+    n = normalizar_texto(nombre)
+    if not n:
+        return True
+    if 'club world cup' in n or 'mundial de clubes' in n or 'copa mundial de clubes' in n:
+        return False
+    frases = ('qualification', 'qualifier', 'world cup', 'copa america',
+              'nations league', 'african cup', 'africa cup', 'gold cup',
+              'asian cup', 'olympic', 'confederations', 'eurocopa',
+              'euro 20', 'eliminatorias', 'eliminatory',
+              'sub 20', 'sub20', 'sub 19', 'sub19', 'sub 17', 'sub17',
+              'sub 23', 'sub23', 'u20', 'u19', 'u17', 'u23', 'u21')
+    return any(f in n for f in frases)
 
-    No recorre `firstSeasonStats`: el perfil puede repetir ahí algunos valores.
-    Se usa el resumen principal de la misma liga/temporada del equipo de la fecha.
+
+def torneos_de_temporada(profile, season):
+    """Torneos de CLUB de una temporada del perfil; None si la temporada no existe."""
+    for s in profile.get('statSeasons') or []:
+        if str(s.get('seasonName')) == str(season):
+            return [t for t in (s.get('tournaments') or [])
+                    if not _es_torneo_seleccion(t.get('name'))]
+    return None
+
+
+def _leer_stats_torneo(payload):
+    """Extrae Goals/Assists/Matches de un playerStats; None si no hay topStatCard."""
+    if not isinstance(payload, dict):
+        return None
+    items = payload.get('topStatCard') or {}
+    valores = {normalizar_texto(i.get('title')): i.get('statValue')
+               for i in items.get('items') or []}
+
+    def numero(titulo):
+        v = valores.get(titulo)
+        if v in (None, ''):
+            return None
+        try:
+            return int(float(v))
+        except (TypeError, ValueError):
+            return None
+
+    goles, asistencias = numero('goals'), numero('assists')
+    if goles is None or asistencias is None:
+        return None
+    return {'goles': goles, 'asistencias': asistencias,
+            'partidos': numero('matches')}
+
+
+def extraer_stats_temporada_fotmob(profile, fila_totw, api):
+    """Suma goles/asist/PJ de todos los torneos de CLUB de la temporada.
+
+    El entrenamiento incluye copas/continental (verificado: partidos > 38 por
+    temporada), asi que alinear exige sumar torneos, no solo mainLeague.
+    Valida identidad contra el TOTW antes de llamar a la API. Torneo club sin
+    goles/asistencias -> no se puntua (faltante != cero); sin 'Matches' solo
+    afecta la auditoria, no las features del modelo.
     """
     if not profile:
         return None, 'perfil_fotmob_ausente'
@@ -298,10 +338,35 @@ def extraer_stats_perfil_fotmob(profile, fila_totw):
     elif normalizar_texto(club) != normalizar_texto(fila_totw.get('club_fotmob')):
         return None, 'club_mainLeague_no_coincide'
 
-    stats = main.get('stats') or []
-    goles = _valor_stat_main_league(stats, 'Goals')
-    asistencias = _valor_stat_main_league(stats, 'Assists')
-    partidos = _valor_stat_main_league(stats, 'Matches')
+    torneos = torneos_de_temporada(profile, fila_totw.get('temporada_fotmob'))
+    if torneos is None:
+        return None, 'temporada_stats_ausente'
+    if not torneos:
+        return None, 'sin_torneos_club_en_temporada'
+
+    goles = asistencias = partidos = 0
+    sin_partidos = 0
+    nombres = []
+    pid = int(profile['id'])
+    for torneo in torneos:
+        entry = torneo.get('entryId')
+        if not entry:
+            return None, 'stats_torneo_sin_entryid'
+        try:
+            payload = api.stats_torneo(pid, entry, force_refresh=True)
+        except Exception as exc:
+            return None, f'error_stats_torneo_{type(exc).__name__}'
+        total = _leer_stats_torneo(payload)
+        if total is None:
+            return None, 'stats_torneo_incompleto'
+        goles += total['goles']
+        asistencias += total['asistencias']
+        if total['partidos'] is None:
+            sin_partidos += 1
+        else:
+            partidos += total['partidos']
+        nombres.append(str(torneo.get('name') or entry))
+
     birth = profile.get('birthDate') or {}
     edad = _edad_en_fecha({
         'fecha_nacimiento': birth.get('utcTime'),
@@ -310,7 +375,7 @@ def extraer_stats_perfil_fotmob(profile, fila_totw):
     posicion = _posicion_perfil_fotmob(profile, fila_totw.get('vertical_layout'))
     if not posicion or agrupar_posicion(posicion) == 'Arquero':
         return None, 'posicion_no_soportada_o_arq'
-    if any(v is None for v in (goles, asistencias, edad)):
+    if edad is None:
         return None, 'feature_requerida_ausente'
 
     return {
@@ -322,9 +387,11 @@ def extraer_stats_perfil_fotmob(profile, fila_totw):
         'goles': goles,
         'asistencias': asistencias,
         'partidos_temporada': partidos,
+        'torneos_stats': ', '.join(nombres),
+        'torneos_sin_matches': sin_partidos,
         'liga_stats': main.get('leagueName'),
         'temporada_stats': main.get('season'),
-        'fuente_stats': 'FotMob mainLeague.stats',
+        'fuente_stats': 'FotMob playerStats (todos los torneos de club)',
     }, None
 
 
@@ -357,7 +424,7 @@ def enriquecer_y_puntuar(filas_totw, api_fotmob, scorer=None):
             else:
                 perfiles[player_id] = (profile, None)
         profile, error_profile = perfiles[player_id]
-        stats, error_stats = (extraer_stats_perfil_fotmob(profile, fila)
+        stats, error_stats = (extraer_stats_temporada_fotmob(profile, fila, api_fotmob)
                               if profile else (None, error_profile or 'perfil_fotmob_ausente'))
         if stats is None:
             no_resueltos.append({**fila, 'motivo_no_puntuado': error_stats})
