@@ -46,7 +46,7 @@ temporadas_en_dataset. NO usar participacion_gol, pases_norm, rendimiento, edad_
 + dummies de posición (esquema decidido por experimento AUPRC).
 
 ## Comandos
-- Tests: `python -m pytest tests -q` (17 tests: reglas de DS + parsing/scoring offline).
+- Tests: `python -m pytest tests -q` (18 tests: reglas de DS + parsing/scoring offline).
 - Ejecutar notebooks con kernel Python 3.12 (python312, el único con nbclient + seaborn).
 - Regenerar datos: `python src/merge_datasets.py` desde la raíz.
 - Validar cambios: re-ejecutar la celda/notebook afectado y comparar outputs.
@@ -70,10 +70,10 @@ temporadas_en_dataset. NO usar participacion_gol, pases_norm, rendimiento, edad_
 1. (resuelto) Notebooks de modelo: re-ejecutados con esquema 9 (sin arqueros, 729 filas).
 2. (resuelto) L1 corregida: penalty='l1' + solver='saga' en train_model.py.
 3. (resuelto) eda.ipynb: re-ejecutado completo (39 celdas, 0 errores).
-4. (MVP implementado, live pendiente) `src/scouting_pipeline.py`: verificar el formato real de
-   fixtures/rounds de FotMob, season/league/players de API-Football y el cruce nombre+club+liga.
-   No ejecutar contra APIs hasta confirmar `API_KEY` y presupuesto de llamadas; el uso live
-   actualiza la caché SQLite `api_cache`.
+4. (MVP implementado, live parcial) `src/scouting_pipeline.py`: FotMob devolvió fixtures/TOTW
+   para Argentina y se resolvieron 2 jugadores; API-Football rechazó estadísticas 2026 porque
+   el plan Free solo cubre temporadas antiguas. No reintentar stats live hasta habilitar una
+   temporada compatible o aprobar otra fuente. FotMob live actualiza la caché SQLite `api_cache`.
 
 ## Completar el proyecto (orden sugerido)
 1. (hecho) Re-ejecutar EDA con el esquema nuevo (incl. celdas 28–30).
@@ -82,7 +82,7 @@ temporadas_en_dataset. NO usar participacion_gol, pases_norm, rendimiento, edad_
    API-Football → score → `ranking_jugadores_fecha_YYYY-Www.csv`. Falta validación live.
 4. NLP: sentimiento de la hinchada (placeholders Reddit en .env).
 5. Automatización semanal + publicación de tweet top-5.
-6. Tests offline en pytest (17 casos); documentar resultados live cuando se autoricen.
+6. Tests offline en pytest (18 casos); documentar resultados live cuando se autoricen.
 
 ## Límites
 - ✅ Editar notebooks/.py, regenerar CSVs desde merge_datasets.py, reentrenar y guardar en models/

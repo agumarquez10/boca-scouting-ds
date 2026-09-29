@@ -5,6 +5,7 @@ from scouting_pipeline import (
     enriquecer_y_puntuar,
     extraer_fixtures_semana,
     generar_ranking_semanal,
+    resolver_stats_candidato,
     seleccionar_rounds,
     ultimo_bloque_semanal_completo,
 )
@@ -78,6 +79,7 @@ def test_selecciona_rounds_del_fixture_y_excluye_tots():
     ]}
 
     assert seleccionar_rounds(rounds, {'5'}) == ['5']
+    assert seleccionar_rounds(rounds, set()) == ['6', '5']
 
 
 def test_cruce_api_exige_nombre_club_y_liga_y_agrega_stats_de_equipos():
@@ -102,6 +104,20 @@ def test_no_acepta_club_o_liga_ambiguos():
     stats, error = _stats_de_jugador(api_player_response(), 'Juan Perez', 'Otro Club', 8)
     assert stats is None
     assert error == 'identidad_api_no_univoca'
+
+
+def test_identifica_limite_de_plan_en_stats_api():
+    class ApiPlanLimitado:
+        def get(self, endpoint, params, use_cache=True):
+            assert endpoint == 'players'
+            assert not use_cache
+            return {'errors': {'plan': 'Free plans do not have access to this season'}}
+
+    stats, error = resolver_stats_candidato(
+        ApiPlanLimitado(), 'Juan Perez', 'Boca Juniors', 8, 2026)
+
+    assert stats is None
+    assert error == 'plan_api_sin_acceso_a_temporada'
 
 
 class FotMobFalso:

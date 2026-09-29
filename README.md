@@ -104,11 +104,11 @@ Credenciales en `secrets/.env` (no versionado; ver `.env.example`).
 - [x] EDA con esquema nuevo (incl. correlaciones por posición)
 - [x] Esquema de 9 features y validación temporal por jugador de L1/RF
 - [x] MVP offline del radar semanal TOTW → stats API-Football → ranking del modelo
-- [ ] Validar integración live (seasons, rounds, nombres/equipos, cuota API y caché SQLite)
+- [ ] Completar validación live: FotMob devolvió los TOTW de Argentina, pero API-Football Free rechazó stats 2026
 - [x] NLP de sentimiento con fallback a placeholders
 - [x] Script de automatización local; integración con `ranking_jugadores_fecha` pendiente
-- [ ] Refrescar `candidatos_mercado` por API (API_KEY vacía — **rotar keys**:
-      quedaron en el historial git)
+- [ ] Habilitar una fuente/plan con estadísticas de temporada 2026 en API-Football
+- [ ] Revocar credenciales antiguas que quedaron en el historial git (la clave actual ya está configurada)
 - [ ] Activar scrape real de Reddit (app tipo *script*; hoy 401 → placeholders)
 - [ ] Publicar tweet real (faltan credenciales OAuth 1.0a; hoy se escribe
       `data/tweet_top5.txt`)

@@ -107,18 +107,8 @@ def _extraer_equipo(fixture, lado):
     return equipo_id, nombre
 
 
-def extraer_fixtures_semana(payload, inicio, fin):
-    """Normaliza fixtures FotMob dentro de la semana y retiene el round.
-
-    Se aceptan las formas anidadas y normalizadas que devuelve FotMob. Si una
-    fixture no trae fecha o round identificable, se omite: asignarle una semana
-    o ronda por aproximacion podria mezclar jugadores de fechas distintas.
-    """
-    inicio = _parse_fecha(inicio)
-    fin = _parse_fecha(fin)
-    if inicio is None or fin is None or inicio >= fin:
-        raise ValueError('inicio/fin deben formar un intervalo UTC valido')
-
+def extraer_fixtures(payload):
+    """Normaliza la lista de fixtures de FotMob, aunque no tenga round."""
     fixtures = []
     vistos = set()
 
@@ -132,21 +122,20 @@ def extraer_fixtures_semana(payload, inicio, fin):
                 'roundId', 'roundName', 'tournamentRound_roundName',
                 'tournamentRound_name', 'round_name', 'round_number',
                 'round', 'tournamentRound'))
-            if fixture_id is not None and fecha is not None and round_raw is not None:
+            if fixture_id is not None and fecha is not None:
                 try:
                     match_id = int(fixture_id)
                 except (TypeError, ValueError):
                     match_id = None
-                token = _round_token(round_raw)
+                token = _round_token(round_raw) if round_raw is not None else ''
                 key = (match_id, fecha.isoformat(), token)
-                if (match_id is not None and token and inicio <= fecha < fin
-                        and key not in vistos):
+                if match_id is not None and key not in vistos:
                     home_id, home_name = _extraer_equipo(obj, 'home')
                     away_id, away_name = _extraer_equipo(obj, 'away')
                     fixtures.append({
                         'match_id': match_id,
                         'fecha_partido_utc': fecha,
-                        'round_raw': str(round_raw),
+                        'round_raw': str(round_raw) if round_raw is not None else '',
                         'round_token': token,
                         'home_id': str(home_id) if home_id is not None else '',
                         'home_name': home_name or '',
@@ -164,6 +153,16 @@ def extraer_fixtures_semana(payload, inicio, fin):
     return fixtures
 
 
+def extraer_fixtures_semana(payload, inicio, fin):
+    """Filtra fixtures por intervalo UTC semiabierto [inicio, fin)."""
+    inicio = _parse_fecha(inicio)
+    fin = _parse_fecha(fin)
+    if inicio is None or fin is None or inicio >= fin:
+        raise ValueError('inicio/fin deben formar un intervalo UTC valido')
+    return [f for f in extraer_fixtures(payload)
+            if inicio <= f['fecha_partido_utc'] < fin]
+
+
 def seleccionar_rounds(rounds_payload, fixture_round_tokens):
     rounds = rounds_payload.get('rounds', []) if isinstance(rounds_payload, dict) else []
     tokens = set(fixture_round_tokens)
@@ -176,7 +175,7 @@ def seleccionar_rounds(rounds_payload, fixture_round_tokens):
             round_id, completado = item, True
         if not round_id or str(round_id).strip().lower() == 'tots' or not completado:
             continue
-        if _round_token(round_id) in tokens:
+        if not tokens or _round_token(round_id) in tokens:
             elegidos.append(str(round_id))
     return list(dict.fromkeys(elegidos))
 
@@ -199,24 +198,28 @@ def recolectar_totw_semana(api_fotmob, liga, inicio, fin):
     if not season:
         return [], [f"{liga['nombre']}: FotMob no devolvio temporada actual"]
 
-    fixtures = extraer_fixtures_semana(
-        api_fotmob.fixtures(liga['fotmob_id'], season, force_refresh=True), inicio, fin)
-    if not fixtures:
-        return [], [f"{liga['nombre']} {season}: sin fixtures fechados/round en la semana"]
+    fixtures_todos = extraer_fixtures(
+        api_fotmob.fixtures(liga['fotmob_id'], season, force_refresh=True))
+    inicio_dt, fin_dt = _parse_fecha(inicio), _parse_fecha(fin)
+    fixtures_semana = [f for f in fixtures_todos
+                       if inicio_dt <= f['fecha_partido_utc'] < fin_dt]
+    if not fixtures_semana:
+        return [], [f"{liga['nombre']} {season}: sin fixtures fechados en la semana"]
 
     rounds_payload = api_fotmob.totw_rounds(
         liga['fotmob_id'], season, force_refresh=True)
     round_ids = seleccionar_rounds(
-        rounds_payload, {f['round_token'] for f in fixtures})
+        rounds_payload, {f['round_token'] for f in fixtures_semana if f['round_token']})
     if not round_ids:
-        return [], [f"{liga['nombre']} {season}: no se pudo asociar fixture con round TOTW"]
+        return [], [f"{liga['nombre']} {season}: no hay rounds TOTW completados"]
 
-    fixture_por_id = {f['match_id']: f for f in fixtures}
+    fixture_por_id = {f['match_id']: f for f in fixtures_todos}
+    fixture_ids_semana = {f['match_id'] for f in fixtures_semana}
     filas = []
     avisos = []
-    for round_id in round_ids:
+    for indice, round_id in enumerate(round_ids):
         totw = api_fotmob.totw(
-            liga['fotmob_id'], season, round_id, force_refresh=True)
+            liga['fotmob_id'], season, round_id, force_refresh=indice < 3)
         jugadores = totw.get('players', []) if isinstance(totw, dict) else totw
         for jugador in jugadores if isinstance(jugadores, list) else []:
             try:
@@ -224,7 +227,7 @@ def recolectar_totw_semana(api_fotmob, liga, inicio, fin):
             except (TypeError, ValueError):
                 continue
             fixture = fixture_por_id.get(match_id)
-            if fixture is None:
+            if fixture is None or match_id not in fixture_ids_semana:
                 continue
             rating = (jugador.get('rating') or {}).get('num')
             try:
@@ -250,10 +253,9 @@ def recolectar_totw_semana(api_fotmob, liga, inicio, fin):
 
 
 def resolver_liga_api_football(api_football, liga, semana):
-    parametros = {
-        'country': liga['api_country'],
-        'search': liga['api_league_search'],
-    }
+    # Filtramos localmente desde el listado del país: combinar `country` y
+    # `search` puede devolver cero filas en algunos resultados de API-Football.
+    parametros = {'country': liga['api_country']}
     # La cache global no tiene TTL: refrescar la temporada activa semanalmente.
     payload = api_football.get('leagues', parametros, use_cache=False)
     respuesta = payload.get('response', [])
@@ -264,15 +266,27 @@ def resolver_liga_api_football(api_football, liga, semana):
         if (item.get('country', {}).get('name', '').lower() != liga['api_country'].lower()
                 and item.get('country', {}).get('code', '').lower() != liga['api_country'].lower()):
             continue
-        if termino not in normalizar_texto(league.get('name')):
+        nombre_liga = normalizar_texto(league.get('name'))
+        if termino not in nombre_liga:
             continue
         temporadas = item.get('seasons') or []
-        actuales = [s for s in temporadas if s.get('current')]
-        if not actuales:
-            actuales = [s for s in temporadas if str(s.get('year')) == str(semana.year)]
-        for season in actuales:
-            candidatas.append((league.get('id'), season.get('year')))
-    candidatas = list(dict.fromkeys((lid, year) for lid, year in candidatas if lid and year))
+        nombre_exacto = nombre_liga == termino
+        for season in temporadas:
+            try:
+                year = int(season.get('year'))
+            except (TypeError, ValueError):
+                continue
+            misma_temporada_calendario = year == semana.year
+            actual_reciente = bool(season.get('current')) and 0 <= semana.year - year <= 1
+            if misma_temporada_calendario or actual_reciente:
+                candidatas.append((not nombre_exacto, abs(semana.year - year),
+                                   league.get('id'), year))
+    if candidatas:
+        mejor_rango = min((c[0], c[1]) for c in candidatas)
+        candidatas = [c for c in candidatas if (c[0], c[1]) == mejor_rango]
+    candidatas = list(dict.fromkeys((league_id, year)
+                                    for _, _, league_id, year in candidatas
+                                    if league_id and year))
     if len(candidatas) != 1:
         raise LookupError(
             f"Liga API-Football ambigua/sin temporada actual para {liga['nombre']}: {candidatas}")
@@ -347,7 +361,18 @@ def resolver_stats_candidato(api_football, nombre, club, league_id, season):
     payload = api_football.get('players', {
         'search': nombre, 'league': league_id, 'season': season,
     }, use_cache=False)
-    return _stats_de_jugador(payload.get('response', []), nombre, club, league_id)
+    errores = payload.get('errors') or {}
+    if errores:
+        texto_error = normalizar_texto(' '.join(str(v) for v in
+                                                (errores.values() if isinstance(errores, dict)
+                                                 else errores)))
+        if 'plan' in texto_error and ('season' in texto_error or 'temporada' in texto_error):
+            return None, 'plan_api_sin_acceso_a_temporada'
+        return None, 'error_respuesta_api_football'
+    response = payload.get('response', [])
+    if not response:
+        return None, 'jugador_sin_resultado_api'
+    return _stats_de_jugador(response, nombre, club, league_id)
 
 
 def enriquecer_y_puntuar(filas_totw, api_football, liga_api_id, season_api, scorer=None):

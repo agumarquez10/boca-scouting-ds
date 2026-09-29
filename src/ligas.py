@@ -12,7 +12,7 @@ LIGAS_FOTMOB = [
         'nombre': 'Argentina',
         'fotmob_id': 112,
         'api_country': 'Argentina',
-        'api_league_search': 'Liga Profesional',
+        'api_league_search': 'Liga Profesional Argentina',
         'temporadas_totw': ['2024'],
         'skip': False,
         'razon_skip': '',
