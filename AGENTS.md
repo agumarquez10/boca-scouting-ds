@@ -19,7 +19,8 @@ competiciones y medir el sentimiento de la hinchada.
 - Objetivo actual: radar semanal de equipos de la fecha de FotMob + score/ranking top 5.
   El sentimiento real y la integración del tweet quedan para una etapa posterior.
 - Estado real: entrenamiento e inferencia sincronizados con el esquema de 9 features,
-  CV/OOF por jugador con GroupKFold; EDA y notebooks activos al día. `model_training.ipynb`
+  CV/OOF por jugador con GroupKFold y calibrador Platt (`probabilidad_adn`, Brier
+  0.172→0.160 y ECE(5) 0.107→0.065 en test); EDA y notebooks activos al día. `model_training.ipynb`
   conserva un flujo legado y no es fuente de artefactos. La selección del clasificador debe
   basarse en validación temporal y métricas
   de ranking, no quedar codificada como una decisión permanente en estas instrucciones.
@@ -41,7 +42,7 @@ competiciones y medir el sentimiento de la hinchada.
 - data/jugadores_fecha_no_resueltos_YYYY-Www.csv → TOTW sin identidad/stats completas; excluidos del score.
 - data/boca_juniors.db → adn_boca, jugadores_entrenamiento, candidatos_mercado (180 jugadores), plantilla (vacía).
 - models/*.pkl → artefacto principal y comparadores Logistic/RF, scaler.pkl,
-  features_list.pkl, config.pkl, position_encoder.pkl.
+  features_list.pkl, config.pkl, position_encoder.pkl, calibrador.pkl (Platt).
 - src/merge_datasets.py → pipeline de datos. outputs/*.png → figuras.
 
 ## Memoria del proyecto (obligatoria)
@@ -70,7 +71,9 @@ competiciones y medir el sentimiento de la hinchada.
 4. Los outliers (goles/asistencias) son leyendas (Riquelme, Palacio). NO se eliminan.
 5. Eliminar features con |r|>0.8 entre sí (en el dataset actual no hay pares: goles/asistencias
    son features legítimas del esquema 9).
-6. La inferencia SIEMPRE usa los pkl (modelo+scaler+features+config+encoder), nunca recalcula.
+6. La inferencia SIEMPRE usa los pkl (modelo+scaler+features+config+encoder+calibrador),
+   nunca recalcula. `probabilidad_adn` sale del calibrador Platt; el ranking se ordena
+   por el score bruto (el calibrador es monotónico).
 7. sklearn: penalty='l1' requiere solver='saga' y sin l1_ratio (es solo de elasticnet). Sin warnings.
 
 

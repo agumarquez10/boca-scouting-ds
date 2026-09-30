@@ -64,7 +64,8 @@ entrenar ni generar artefactos; usar `src/train_model.py`.
 4. Los outliers (goles/asistencias) son leyendas: NO se eliminan.
 5. Sin features con `|r| > 0.8` entre sí.
 6. La inferencia SIEMPRE usa los pkl (`modelo_adn_boca.pkl`, `scaler.pkl`,
-   `features_list.pkl`, `position_encoder.pkl`, `config.pkl`), nunca recalcula.
+   `features_list.pkl`, `position_encoder.pkl`, `config.pkl`, `calibrador.pkl`),
+   nunca recalcula.
 7. `penalty='l1'` requiere `solver='saga'` (sin `l1_ratio`).
 
 ## Features del modelo (esquema 9)
@@ -92,13 +93,24 @@ los resultados orientan la elección, no garantizan el rendimiento futuro. El
 score se usa para ordenar este universo seleccionado por TOTW; no es una
 probabilidad calibrada para todo el mercado.
 
+### Probabilidad calibrada (`probabilidad_adn`)
+La salida del modelo está reponderada por `class_weight='balanced'` y nunca se
+había calibrado. Se aplica un calibrador **Platt** (sigmoid) ajustado sobre el
+OOF por jugador y guardado en `models/calibrador.pkl` (`src/calibracion.py`).
+En test: **Brier 0.1716 → 0.1595** y **ECE(5) 0.1071 → 0.0645**. Interpretación:
+P(etiqueta manual = ADN Boca | features) bajo la distribución de entrenamiento;
+sobre TOTW es una extrapolación (no hay etiquetas de verificación allí). El
+ranking sigue ordenándose por el score bruto: Platt con pendiente `a>0` es
+monotónico y no cambia el orden. La columna aparece en
+`scouting_resultado_historico.csv` y en el próximo CSV semanal.
+
 ## Datos
 
 | Archivo | Descripción |
 |---|---|
 | `data/adn_boca_real.csv` | Raw etiquetado (con rating, 795 filas) |
 | `data/adn_boca_real_features.csv` | Features sin rating (795×14, fuente de entrenamiento) |
-| `data/scouting_resultado_historico.csv` | Predicciones del modelo (OOF en train, test directo) |
+| `data/scouting_resultado_historico.csv` | Predicciones del modelo (OOF en train, test directo; con `probabilidad_adn` calibrada) |
 | `data/ranking_jugadores_fecha_YYYY-Www.csv` | Ranking semanal nuevo, una fila por jugador, con score y captura de stats |
 | `data/jugadores_fecha_no_resueltos_YYYY-Www.csv` | TOTW sin cruce/estadísticas completas; no se puntúan |
 | `data/scouting_resultado.csv` | Ranking antiguo de mercado; no lo genera el radar semanal |
@@ -112,6 +124,7 @@ Credenciales en `secrets/.env` (no versionado; ver `.env.example`).
 - [x] EDA con esquema nuevo (incl. correlaciones por posición)
 - [x] Esquema de 9 features y validación temporal por jugador de L1/RF
 - [x] MVP offline del radar semanal TOTW → stats por torneo FotMob (todas las competiciones de club) → ranking del modelo
+- [x] Calibración Platt del score (`probabilidad_adn`) validada con Brier/ECE por jugador
 - [x] Validación live de cobertura: Argentina y Perú puntuaron (2+2); Brasil con aviso de parón
 - [ ] Re-activar Ecuador (stand by en `ligas.py`) cuando FotMob publique su TOTW; MLS quitada
 - [x] NLP de sentimiento con fallback a placeholders

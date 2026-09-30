@@ -60,10 +60,13 @@ def construir_features_batch(jugadores_stats):
     return df
 
 
-def aplicar_modelo(df_features, modelo_path=None, scaler_path=None, config_path=None):
+def aplicar_modelo(df_features, modelo_path=None, scaler_path=None, config_path=None,
+                   calibrador_path=None):
     """Aplica el modelo entrenado a un DataFrame de features.
 
-    Devuelve el DataFrame con columna 'probabilidad' (0.0-1.0).
+    Devuelve `probabilidad` (score ordinal del modelo, sin calibrar) y
+    `probabilidad_adn` (score transformado por el calibrador Platt de
+    `calibrador.pkl`: P(etiqueta manual | features) bajo el train).
     """
     import joblib
 
@@ -73,6 +76,8 @@ def aplicar_modelo(df_features, modelo_path=None, scaler_path=None, config_path=
         scaler_path = os.path.join(MODEL_DIR, 'scaler.pkl')
     if config_path is None:
         config_path = os.path.join(MODEL_DIR, 'config.pkl')
+    if calibrador_path is None:
+        calibrador_path = os.path.join(MODEL_DIR, 'calibrador.pkl')
 
     modelo = joblib.load(modelo_path)
     scaler = joblib.load(scaler_path)
@@ -90,6 +95,10 @@ def aplicar_modelo(df_features, modelo_path=None, scaler_path=None, config_path=
     prob = modelo.predict_proba(X_scaled)[:, 1]
     df_features = df_features.copy()
     df_features['probabilidad'] = prob
+    if os.path.exists(calibrador_path):
+        from calibracion import aplicar_platt
+        calibrador = joblib.load(calibrador_path)
+        df_features['probabilidad_adn'] = aplicar_platt(prob, calibrador)
     return df_features
 
 

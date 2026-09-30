@@ -18,6 +18,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from calibracion import ajustar_platt, aplicar_platt, brier, ece
 from posiciones import PositionEncoder
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -153,21 +154,32 @@ def entrenar_modelo_principal(X_train, X_test, y_train, y_test, features, df, te
     print(f'OOF AUC (GroupKFold por jugador): {roc_auc_score(y_train, oof):.3f}')
     print(f'OOF AUPRC (filas): {average_precision_score(y_train, oof):.3f}')
 
-    return modelo, scaler, y_pred, y_prob, oof, auc
+    # Platt sobre OOF por jugador: convierte el score reponderado por
+    # class_weight en P(etiqueta manual | features) bajo el train.
+    calibrador = ajustar_platt(oof, y_train.to_numpy(), reporte='OOF train por jugador')
+    prob_cal = aplicar_platt(y_prob, calibrador)
+    print(f'Platt: a={calibrador["a"]:.4f} b={calibrador["b"]:.4f} | '
+          f'Brier test {brier(y_test, y_prob):.4f} -> {brier(y_test, prob_cal):.4f} | '
+          f'ECE(5) test {ece(y_test, y_prob, bins=5):.4f} -> {ece(y_test, prob_cal, bins=5):.4f}')
+
+    return modelo, scaler, y_pred, y_prob, oof, auc, calibrador
 
 
-def guardar_scouting(df, features, test_mask, oof, y_prob):
+def guardar_scouting(df, features, test_mask, oof, y_prob, calibrador):
     # goles/asistencias vienen del CSV de features (df); ya no hace falta
     # mergear contra el raw etiquetado.
     resultado = df[['nombre', 'temporada', 'posicion', 'edad', 'partidos',
                     'goles', 'asistencias', 'etiqueta']].copy()
     resultado['probabilidad'] = 0.0
+    resultado['probabilidad_adn'] = 0.0
     resultado['prediccion'] = 0
     resultado['fuente'] = ''
     resultado.loc[~test_mask, 'probabilidad'] = oof
+    resultado.loc[~test_mask, 'probabilidad_adn'] = aplicar_platt(oof, calibrador)
     resultado.loc[~test_mask, 'prediccion'] = (oof >= 0.5).astype(int)
     resultado.loc[~test_mask, 'fuente'] = 'cv'
     resultado.loc[test_mask, 'probabilidad'] = y_prob
+    resultado.loc[test_mask, 'probabilidad_adn'] = aplicar_platt(y_prob, calibrador)
     resultado.loc[test_mask, 'prediccion'] = (y_prob >= 0.5).astype(int)
     resultado.loc[test_mask, 'fuente'] = 'test'
     resultado = resultado.sort_values('probabilidad', ascending=False)
@@ -223,10 +235,10 @@ def main():
     print(f'Train: {len(X_train)} registros, {df[train_mask]["nombre"].nunique()} jugadores')
     print(f'Test:  {len(X_test)} registros, {df[test_mask]["nombre"].nunique()} jugadores')
 
-    modelo, scaler, y_pred, y_prob, oof, auc = entrenar_modelo_principal(
+    modelo, scaler, y_pred, y_prob, oof, auc, calibrador = entrenar_modelo_principal(
         X_train, X_test, y_train, y_test, features, df, test_mask, grupos)
 
-    guardar_scouting(df, features, test_mask, oof, y_prob)
+    guardar_scouting(df, features, test_mask, oof, y_prob, calibrador)
 
     modelo_arbol = entrenar_modelo_arbol(X_train, X_test, y_train, y_test, grupos)
     modelo_bosque = entrenar_modelo_bosque(X_train, X_test, y_train, y_test, grupos)
@@ -240,10 +252,11 @@ def main():
     joblib.dump(modelo_bosque, os.path.join(MODEL_DIR, 'modelo_bosque.pkl'))
     joblib.dump({'features': BASE_FEATURES, 'pos_columns': POS_COLUMNS},
                 os.path.join(MODEL_DIR, 'config.pkl'))
+    joblib.dump(calibrador, os.path.join(MODEL_DIR, 'calibrador.pkl'))
 
     for f in ['modelo_adn_boca.pkl', 'scaler.pkl', 'features_list.pkl',
               'position_encoder.pkl', 'modelo_logistic_l1.pkl', 'modelo_arbol.pkl',
-              'modelo_bosque.pkl', 'config.pkl']:
+              'modelo_bosque.pkl', 'config.pkl', 'calibrador.pkl']:
         print(f'  models/{f} guardado')
     print(f'AUC-ROC test: {auc:.3f}')
 

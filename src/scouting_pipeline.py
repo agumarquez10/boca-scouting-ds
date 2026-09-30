@@ -473,8 +473,10 @@ def enriquecer_y_puntuar(filas_totw, api_fotmob, scorer=None):
     df_unico = pd.DataFrame(seleccion).reset_index(drop=True)
 
     features = df_unico[['goles', 'asistencias', 'edad', 'posicion']].copy()
-    scores = scorer(features)['probabilidad'].to_numpy()
-    df_unico['score_adn_boca'] = scores
+    scores_df = scorer(features)
+    df_unico['score_adn_boca'] = scores_df['probabilidad'].to_numpy()
+    if 'probabilidad_adn' in scores_df.columns:
+        df_unico['probabilidad_adn'] = scores_df['probabilidad_adn'].to_numpy()
     df_unico = df_unico.sort_values('score_adn_boca', ascending=False).reset_index(drop=True)
     df_unico.insert(0, 'ranking', range(1, len(df_unico) + 1))
     df_unico['estadisticas_as_of_utc'] = datetime.now(timezone.utc).isoformat()

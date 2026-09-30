@@ -302,6 +302,7 @@ def test_pipeline_puntua_con_stats_por_torneo_sin_red_ni_sqlite():
         assert list(features.columns) == ['goles', 'asistencias', 'edad', 'posicion']
         out = features.copy()
         out['probabilidad'] = [0.81] * len(out)
+        out['probabilidad_adn'] = [0.64] * len(out)
         return out
 
     fotmob = FotMobFalso()
@@ -312,6 +313,7 @@ def test_pipeline_puntua_con_stats_por_torneo_sin_red_ni_sqlite():
     assert unmatched.empty
     assert len(ranking) == 1
     assert ranking.iloc[0]['score_adn_boca'] == 0.81
+    assert ranking.iloc[0]['probabilidad_adn'] == 0.64
     assert ranking.iloc[0]['goles'] == 7
     assert ranking.iloc[0]['club'] == 'Boca Juniors'
     assert fotmob.perfiles_consultados == [1234]

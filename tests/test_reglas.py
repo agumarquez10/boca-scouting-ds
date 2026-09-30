@@ -75,6 +75,23 @@ def test_pkls_cargables_y_prediccion_valida():
     assert X.shape[1] == len(config['features']) + len(config['pos_columns'])
 
 
+def test_calibrador_platt_y_probabilidad_adn():
+    cal = joblib.load(os.path.join(MODEL_DIR, 'calibrador.pkl'))
+    assert cal['metodo'] == 'platt_sigmoid'
+    assert cal['a'] > 0
+    assert cal['reporte'].startswith('OOF')
+
+    from construir_features import aplicar_modelo
+    base = {'goles': 2, 'asistencias': 1, 'edad': 25, 'posicion': 'Centre-Forward'}
+    poca = aplicar_modelo(pd.DataFrame([{**base}]))
+    mucha = aplicar_modelo(pd.DataFrame([{**base, 'goles': 12}]))
+
+    assert 'probabilidad_adn' in poca.columns
+    assert poca['probabilidad_adn'].between(0, 1).all()
+    # Con a > 0 la transformación preserva el orden: más goles no baja la prob.
+    assert mucha['probabilidad_adn'].iloc[0] > poca['probabilidad_adn'].iloc[0]
+
+
 def test_config_consistente_con_features_list():
     config = joblib.load(os.path.join(MODEL_DIR, 'config.pkl'))
     features_list = joblib.load(os.path.join(MODEL_DIR, 'features_list.pkl'))
@@ -95,4 +112,6 @@ def test_historico_valido():
                      encoding='utf-8-sig')
     assert {'fuente', 'etiqueta', 'probabilidad'}.issubset(df.columns)
     assert df['probabilidad'].between(0, 1).all()
+    assert 'probabilidad_adn' in df.columns
+    assert df['probabilidad_adn'].between(0, 1).all()
     assert set(df['fuente']) == {'cv', 'test'}
