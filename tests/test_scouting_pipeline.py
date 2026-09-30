@@ -9,6 +9,7 @@ from scouting_pipeline import (
     torneos_de_temporada,
     ultimo_bloque_semanal_completo,
     _es_torneo_seleccion,
+    _seasones_coinciden,
 )
 
 
@@ -160,6 +161,28 @@ def test_filtro_selecciones_y_mundial_de_clubes_incluido():
     assert not _es_torneo_seleccion('Copa Libertadores')
 
 
+def test_matching_de_temporada_tolerante_al_sufijo_de_fase():
+    assert _seasones_coinciden('2026/2027 - Apertura', '2026/2027')
+    assert _seasones_coinciden('2026/2027', '2026/2027 - Clausura')
+    assert _seasones_coinciden('2026', '2026')
+    assert not _seasones_coinciden('2026', '2026/2027')
+    assert not _seasones_coinciden(None, '2026')
+    assert not _seasones_coinciden('', '2026')
+
+    perfil = perfil_fotmob(
+        mainLeague={'leagueId': 112, 'leagueName': 'Liga', 'season': '2026/2027',
+                    'stats': [{'title': 'Goals', 'value': '7'}]},
+        statSeasons=[{'seasonName': '2026/2027',
+                      'tournaments': [{'name': 'Liga', 'tournamentId': 112,
+                                       'entryId': '0-0'}]}])
+    fila = fila_totw()
+    fila['temporada_fotmob'] = '2026/2027 - Apertura'
+    stats, error = extraer_stats_temporada_fotmob(
+        perfil, fila, ApiFalso(stats_por_entry={'0-0': stats_payload(7, 2, 10)}))
+    assert error is None
+    assert stats['goles'] == 7
+
+
 def test_torneos_de_temporada_filtra_selecciones():
     torneos = torneos_de_temporada(perfil_fotmob(), '2026')
     assert [t['entryId'] for t in torneos] == ['0-0', '0-1']
@@ -308,6 +331,24 @@ def test_stats_incompletas_quedan_no_resueltas_sin_asignar_cero():
 
     assert ranking.empty
     assert unmatched.iloc[0]['motivo_no_puntuado'] == 'stats_torneo_incompleto'
+
+
+def test_totw_sin_match_con_fixtures_de_la_semana_emite_aviso():
+    class FotMobSinMatch(FotMobFalso):
+        def totw(self, *args, **kwargs):
+            filas = super().totw(*args, **kwargs)
+            for f in filas:
+                f['matchId'] = 999
+            return filas
+
+    liga = {'nombre': 'USA (MLS)', 'fotmob_id': 130}
+    ranking, unmatched, avisos = generar_ranking_semanal(
+        FotMobSinMatch(), SEMANA_INICIO, SEMANA_FIN, ligas=[liga],
+        scorer=lambda _: AssertionError('no debe puntuar sin filas'))
+
+    assert ranking.empty
+    assert unmatched.empty
+    assert any('0 jugadores de TOTW coinciden' in a for a in avisos)
 
 
 def test_deduplica_jugador_repetido_y_consulta_perfil_una_vez():

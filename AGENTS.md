@@ -25,9 +25,11 @@ competiciones y medir el sentimiento de la hinchada.
   de ranking, no quedar codificada como una decisión permanente en estas instrucciones.
   `src/scouting_pipeline.py` contiene un MVP semanal FotMob TOTW → stats por torneo
   (`playerStats`, todos los torneos de club de la temporada, alineado con el alcance
-  del entrenamiento que incluye copas) → ranking. Se comprobaron 2 perfiles de Argentina;
-  falta validar cobertura live de todas las ligas activas. También faltan NLP/sentimiento
-  real y la integración de la automatización semanal + tweet con el nuevo ranking.
+  del entrenamiento que incluye copas) → ranking. Ligas activas: Argentina, Brasil,
+  Ecuador, Perú y MLS (México salió a pedido del usuario). Validación live: Argentina
+  y Perú puntuaron; Brasil en parón; Ecuador/MLS esperando publicación del TOTW
+  (el pipeline avisa ese caso). También faltan NLP/sentimiento real y la integración
+  de la automatización semanal + tweet con el nuevo ranking.
 
 ## Datos (fuente de verdad)
 - data/adn_boca_real_features.csv → features principal (795 × 14). NO tiene rating (evita leakage).

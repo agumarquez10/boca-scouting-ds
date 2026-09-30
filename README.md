@@ -36,13 +36,16 @@ FotMob, actualiza la caché `api_cache` de SQLite y guarda el ranking y un CSV
 separado de jugadores no resueltos. Las features se alinean con el alcance del
 entrenamiento (que incluye copas/continental): se suman goles/asistencias de
 todos los torneos de CLUB de la temporada vía `playerStats`, validando ID, club,
-liga y temporada del TOTW. Los torneos de selecciones se excluyen por heurística
+liga y temporada del TOTW (matching tolerante al sufijo de fase, p. ej.
+`2026/2027 - Apertura`). Los torneos de selecciones se excluyen por heurística
 de nombre; si un torneo club no reporta goles/asistencias, el jugador queda sin
 score. `torneos_sin_matches` marca torneos sin reporte de partidos (auditoría,
-no es feature). Dos perfiles argentinos pasaron este flujo end-to-end; falta
-validar cobertura en las otras ligas. No hacer backfill con perfiles actuales
-para fechas históricas: sus totales pueden incluir partidos posteriores a esa
-fecha.
+no es feature). Si hay fixtures en la semana pero el TOTW aún no está publicado,
+el pipeline lo informa como aviso. Ligas activas: Argentina, Brasil, Ecuador,
+Perú y MLS. Validación live de la semana 21–28/09/2026: Argentina y Perú
+puntuaron jugadores; Brasil en parón de liga; Ecuador y MLS esperando
+publicación del TOTW. No hacer backfill con perfiles actuales para fechas
+históricas: sus totales pueden incluir partidos posteriores a esa fecha.
 
 Los notebooks activos se ejecutan con kernel Python 3 desde Jupyter (`python -m
 jupyter notebook`). `src/model_training.ipynb` es legado: no ejecutarlo para
@@ -108,7 +111,8 @@ Credenciales en `secrets/.env` (no versionado; ver `.env.example`).
 - [x] EDA con esquema nuevo (incl. correlaciones por posición)
 - [x] Esquema de 9 features y validación temporal por jugador de L1/RF
 - [x] MVP offline del radar semanal TOTW → stats por torneo FotMob (todas las competiciones de club) → ranking del modelo
-- [ ] Validar cobertura live en Brasil, México y MLS; Argentina probada con 2 perfiles y suma de torneos
+- [x] Validación live de cobertura: Argentina y Perú puntuaron (2+2), Brasil/ECU/MLS con avisos de parón o TOTW pendiente
+- [ ] Re-validar Ecuador y MLS cuando FotMob publique el TOTW de la fecha jugada
 - [x] NLP de sentimiento con fallback a placeholders
 - [x] Script de automatización local; integración con `ranking_jugadores_fecha` pendiente
 - [ ] Revocar credenciales antiguas que quedaron en el historial git (la clave actual ya está configurada)

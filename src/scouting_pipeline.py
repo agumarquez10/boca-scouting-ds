@@ -26,6 +26,21 @@ def normalizar_texto(valor):
     return ' '.join(re.sub(r'[^a-z0-9]+', ' ', texto.lower()).split())
 
 
+def _season_base(valor):
+    """Normaliza una temporada quitando el sufijo de fase (Apertura, etapa...)."""
+    n = normalizar_texto(valor)
+    fases = ('apertura', 'clausura', 'opening', 'closing', 'etapa', 'stage')
+    return ' '.join(w for w in n.split() if w not in fases)
+
+
+def _seasones_coinciden(a, b):
+    """Compara temporadas tolerando fases: '2026/2027 - Apertura' == '2026/2027'."""
+    na, nb = normalizar_texto(a), normalizar_texto(b)
+    if not na or not nb:
+        return False
+    return na == nb or _season_base(a) == _season_base(b)
+
+
 def ultimo_bloque_semanal_completo(referencia=None):
     """Devuelve [lunes 00:00 UTC, lunes siguiente 00:00 UTC), ya completado."""
     ahora = referencia or datetime.now(timezone.utc)
@@ -245,6 +260,11 @@ def recolectar_totw_semana(api_fotmob, liga, inicio, fin):
                 'rating_totw': rating,
                 'vertical_layout': jugador.get('verticalLayout') or {},
             })
+    if not filas:
+        avisos.append(
+            f"{liga['nombre']} {season}: {len(fixtures_semana)} fixtures en la semana "
+            "pero 0 jugadores de TOTW coinciden (el TOTW de la fecha aun puede no "
+            "estar publicado)")
     return filas, avisos
 
 
@@ -278,7 +298,7 @@ def _es_torneo_seleccion(nombre):
 def torneos_de_temporada(profile, season):
     """Torneos de CLUB de una temporada del perfil; None si la temporada no existe."""
     for s in profile.get('statSeasons') or []:
-        if str(s.get('seasonName')) == str(season):
+        if _seasones_coinciden(s.get('seasonName'), season):
             return [t for t in (s.get('tournaments') or [])
                     if not _es_torneo_seleccion(t.get('name'))]
     return None
@@ -325,7 +345,7 @@ def extraer_stats_temporada_fotmob(profile, fila_totw, api):
     main = profile.get('mainLeague') or {}
     if str(main.get('leagueId')) != str(fila_totw.get('liga_id_fotmob')):
         return None, 'liga_mainLeague_no_coincide'
-    if str(main.get('season')) != str(fila_totw.get('temporada_fotmob')):
+    if not _seasones_coinciden(main.get('season'), fila_totw.get('temporada_fotmob')):
         return None, 'temporada_mainLeague_no_coincide'
 
     team = profile.get('primaryTeam') or {}
