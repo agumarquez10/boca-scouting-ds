@@ -26,8 +26,8 @@ LIGAS_FOTMOB = [
         'nombre': 'Ecuador',
         'fotmob_id': 246,
         'temporadas_totw': [],
-        'skip': False,
-        'razon_skip': '',
+        'skip': True,
+        'razon_skip': 'Stand by: esperar a que FotMob publique el TOTW de la fecha',
     },
     {
         'nombre': 'Peru',
@@ -40,8 +40,8 @@ LIGAS_FOTMOB = [
         'nombre': 'USA (MLS)',
         'fotmob_id': 130,
         'temporadas_totw': ['2025'],
-        'skip': False,
-        'razon_skip': '',
+        'skip': True,
+        'razon_skip': 'Quitada del radar a pedido del usuario (2026-09-30)',
     },
 ]
 

@@ -41,11 +41,12 @@ liga y temporada del TOTW (matching tolerante al sufijo de fase, p. ej.
 de nombre; si un torneo club no reporta goles/asistencias, el jugador queda sin
 score. `torneos_sin_matches` marca torneos sin reporte de partidos (auditoría,
 no es feature). Si hay fixtures en la semana pero el TOTW aún no está publicado,
-el pipeline lo informa como aviso. Ligas activas: Argentina, Brasil, Ecuador,
-Perú y MLS. Validación live de la semana 21–28/09/2026: Argentina y Perú
-puntuaron jugadores; Brasil en parón de liga; Ecuador y MLS esperando
-publicación del TOTW. No hacer backfill con perfiles actuales para fechas
-históricas: sus totales pueden incluir partidos posteriores a esa fecha.
+el pipeline lo informa como aviso. Ligas activas: Argentina, Brasil y Perú;
+Ecuador queda en stand by hasta que FotMob publique su TOTW y MLS se quitó a
+pedido del usuario (ambas conservadas con `skip=True` en `ligas.py`). Validación
+live de la semana 21–28/09/2026: Argentina y Perú puntuaron 2 jugadores cada
+una; Brasil en parón de liga. No hacer backfill con perfiles actuales para
+fechas históricas: sus totales pueden incluir partidos posteriores a esa fecha.
 
 Los notebooks activos se ejecutan con kernel Python 3 desde Jupyter (`python -m
 jupyter notebook`). `src/model_training.ipynb` es legado: no ejecutarlo para
@@ -111,8 +112,8 @@ Credenciales en `secrets/.env` (no versionado; ver `.env.example`).
 - [x] EDA con esquema nuevo (incl. correlaciones por posición)
 - [x] Esquema de 9 features y validación temporal por jugador de L1/RF
 - [x] MVP offline del radar semanal TOTW → stats por torneo FotMob (todas las competiciones de club) → ranking del modelo
-- [x] Validación live de cobertura: Argentina y Perú puntuaron (2+2), Brasil/ECU/MLS con avisos de parón o TOTW pendiente
-- [ ] Re-validar Ecuador y MLS cuando FotMob publique el TOTW de la fecha jugada
+- [x] Validación live de cobertura: Argentina y Perú puntuaron (2+2); Brasil con aviso de parón
+- [ ] Re-activar Ecuador (stand by en `ligas.py`) cuando FotMob publique su TOTW; MLS quitada
 - [x] NLP de sentimiento con fallback a placeholders
 - [x] Script de automatización local; integración con `ranking_jugadores_fecha` pendiente
 - [ ] Revocar credenciales antiguas que quedaron en el historial git (la clave actual ya está configurada)

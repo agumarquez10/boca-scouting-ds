@@ -8,8 +8,8 @@
 - Etiquetas manuales; `rating` y derivados no son features. CV/OOF agrupado por jugador y test temporal.
 - `src/scouting_pipeline.py`: semana ISO UTC → fixtures/TOTW FotMob → suma de `playerStats` por torneo de CLUB de la temporada → L1 → ranking + no resueltos + avisos.
 - Alcance verificado: entrenamiento incluye copas/continental; `mainLeague` es solo liga, por eso se suman todos los torneos club.
-- Ligas activas: Argentina, Brasil, Ecuador (246), Perú (131), MLS (130); México quitado a pedido del usuario.
-- Validación live semana 21–28/09/2026: Argentina 2 y Perú 2 puntuados (0 no resueltos); Brasil en parón de liga (sin fechas 21/09–02/10); Ecuador y MLS avisan "fixtures sin TOTW publicado aún".
+- Ligas activas: Argentina (112), Brasil (268), Perú (131). Ecuador (246) en stand by (`skip=True`, sin TOTW publicado) y MLS (130) quitada a pedido del usuario; México salió antes.
+- Validación live semana 21–28/09/2026: Argentina 2 y Perú 2 puntuados (0 no resueltos); Brasil en parón de liga (sin fechas 21/09–02/10; el pipeline avisa el motivo).
 - Tests: 22 pasaron en la última corrida. EDA: 39 celdas, validado.
 - `model_training.ipynb` es legado; no usar para producir artefactos. La automatización aún consume el formato antiguo.
 
@@ -18,6 +18,7 @@
 - Alinear inferencia con entrenamiento sumando todos los torneos de club: con `mainLeague` solo-liga se subestimarían a los que juegan copas.
 - Excluir selecciones de la suma por heurística de nombre (entrenamiento es por club); heurística temporal, no regla permanente.
 - Matching de temporada tolerante al sufijo de fase (`2026/2027 - Apertura` == `2026/2027`): el sufijo rompió a los 16 de México.
+- Salir de las ligas sin TOTW usable (MLS quitada, Ecuador en stand by con `skip`+razón): evita sembrar el radar con avisos repetidos; documenta por qué en la config.
 - Torneo club sin goles/asistencias → jugador sin score (faltante ≠ cero); sin `Matches` solo marca auditoría (`torneos_sin_matches`).
 - `playerStats` se llama con `requests` directo porque la librería `fotmob` devuelve `null` en ese endpoint (cache igual que el resto).
 - El score ordena candidatos TOTW; no es probabilidad calibrada. FotMob como fuente es decisión práctica, no fijada en `AGENTS.md`.
@@ -32,8 +33,8 @@
 - El uso live de FotMob refresca `api_cache` en SQLite; pedir aprobación antes de nuevas consultas/escrituras.
 
 ## 4. Próximos pasos
-1. Re-validar Ecuador y MLS cuando FotMob publique el TOTW de la fecha jugada (21–28/09).
-2. Revisar cuota/caché con un ranking semanal completo de las 5 ligas y decidir si conviene un solo CSV por semana.
+1. Re-activar Ecuador cuando FotMob publique su TOTW (poner `skip=False` y re-validar).
+2. Revisar cuota/caché con un ranking semanal completo de las ligas activas y generar el CSV de la semana.
 3. Integrar sentimiento real solo después de estabilizar el ranking.
 4. Adaptar automatización y tweet para leer el nuevo CSV semanal.
 
