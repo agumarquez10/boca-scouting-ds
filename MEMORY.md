@@ -12,8 +12,8 @@
 - Ligas activas: Argentina (112), Brasil (268), Perú (131), Chile (273), Paraguay (199). Ecuador (246) y Uruguay (161) en stand by (`skip=True`: FotMob no publica TOTW, rounds=null); MLS (130) quitada; México salió antes.
 - Validación live 21–28/09/2026: Argentina/Perú 2+2; Paraguay 2; Brasil y Chile en parón. Semanas W34–W39/2026 guardadas (22–29 jugadores); W40 (28/09–05/10) sin TOTW por fecha FIFA.
 - Ranking histórico: `src/ranking_historico.py` agrega los CSV semanales por `player_id_fotmob` → `data/ranking_historico_acumulado.csv` (116 jugadores, 6 semanas; líder Matheus Pereira 3/5). Reporta `apariciones_top5`, `tasa_top5` (normaliza el volumen de Brasil), score max/medio.
-- Tests: 44 pasaron, 0 warnings (fix sklearn 1.8: `C=np.inf` → `C=1e10` en `ajustar_platt`). EDA: 39 celdas, validado.
-- `automatizacion.py` ya corre el radar TOTW → top 3 por puesto (DEL/MED/DEF; extremos→DEL, laterales→DEF) con club + goles+asistencias → borrador `data/tweet_top5.txt` (no publica; sin límite de 280 chars). El hype global se quitó del tweet (era constante +0.02 y no aportaba); `hype_actual`/`clasificar_hype`/`cargar_hype` quedan para sentimiento real por jugador. `model_training.ipynb`, `scouting_mercado.py`, `semanal.py` y `ranking_acumulado.py` quedan legado.
+- Tests: 54 pasaron, 0 warnings (fix sklearn 1.8: `C=np.inf` → `C=1e10` en `ajustar_platt`). EDA: 39 celdas, validado.
+- `automatizacion.py` corre el radar TOTW → top 3 por puesto (DEL/MED/DEF; extremos→DEL, laterales→DEF) con club + G+A → top 3 por sentimiento (YouTube + prensa multi-medio AR/PE/CL/PY y ESPN/Marca/AS vía Google News RSS, peso 0.6 medios/0.4 gente; `sentimiento_radar.py` + `sentimiento_jugadores_prensa.py`, caché `sentimiento_radar_YYYY-Www.csv`) sobre esos 9 → borrador `data/tweet_top5.txt` (no publica). `hype_*` legacy sin uso. `model_training.ipynb`, `scouting_mercado.py`, `semanal.py`, `ranking_acumulado.py` quedan legado.
 
 ## 2. Decisiones tomadas y por qué
 - L1 se priorizó para ranking por resultados temporales recientes en AUPRC/top-N; puede cambiar con nueva evidencia.
@@ -41,9 +41,9 @@
 
 ## 4. Próximos pasos
 1. Publicar tweet real: faltan credenciales OAuth 1.0a y `requests-oauthlib`; hoy solo borrador.
-2. Sentimiento real por jugador del TOTW (RSS/YouTube existen; Reddit con placeholders 401); hoy solo hype global.
+2. Validar cobertura del sentimiento por jugador (Olé es argentino; ligas lejanas pueden quedar sin datos); ampliar fuentes si hace falta.
 3. Re-activar Ecuador/Uruguay cuando FotMob publique TOTW; programar la corrida semanal.
 
 ## Estado Git observado
 - Último commit: `9dd1367 pruebas fotmob_api eliminando selecciones`.
-- Locales sin commit: `AGENTS.md`, `MEMORY.md`, `README.md`, `src/automatizacion.py`, `src/calibracion.py`, `src/construir_features.py`, `src/ligas.py`, `src/ranking_historico.py`, `src/scouting_pipeline.py`, `src/train_model.py`, `tests/test_automatizacion.py`, `tests/test_calibracion.py`, `tests/test_ranking_historico.py`, `tests/test_reglas.py`, `tests/test_scouting_pipeline.py`.
+- Locales sin commit: `AGENTS.md`, `MEMORY.md`, `README.md`, `src/automatizacion.py`, `src/calibracion.py`, `src/construir_features.py`, `src/ligas.py`, `src/ranking_historico.py`, `src/scouting_pipeline.py`, `src/sentimiento_jugadores_prensa.py`, `src/sentimiento_radar.py`, `src/train_model.py`, `tests/test_automatizacion.py`, `tests/test_calibracion.py`, `tests/test_ranking_historico.py`, `tests/test_reglas.py`, `tests/test_scouting_pipeline.py`, `tests/test_sentimiento_prensa.py`, `tests/test_sentimiento_radar.py`.

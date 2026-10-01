@@ -31,7 +31,8 @@ python src/scouting_pipeline.py
 python src/ranking_historico.py
 
 # 4. Automatización semanal: corre el radar, arma el top 3 por puesto
-#    (DEL/MED/DEF) y escribe el borrador en data/tweet_top5.txt (no publica)
+#    (DEL/MED/DEF) + top 3 por sentimiento (hinchada+medios) y escribe el
+#    borrador en data/tweet_top5.txt (no publica)
 python src/automatizacion.py
 ```
 
@@ -128,6 +129,7 @@ monotónico y no cambia el orden. La columna aparece en
 | `data/ranking_jugadores_fecha_YYYY-Www.csv` | Ranking semanal nuevo, una fila por jugador, con score y captura de stats |
 | `data/jugadores_fecha_no_resueltos_YYYY-Www.csv` | TOTW sin cruce/estadísticas completas; no se puntúan |
 | `data/ranking_historico_acumulado.csv` | Apariciones en el top 5 agregadas por jugador sobre todos los rankings semanales |
+| `data/sentimiento_radar_YYYY-Www.csv` | Sentimiento por jugador del tweet (YouTube + Olé) con caché semanal |
 | `data/scouting_resultado.csv` | Ranking antiguo de mercado; no lo genera el radar semanal |
 | `data/sentimiento_hinchada.csv` | Comentarios + VADER compound + clasificación |
 | `data/boca_juniors.db` | `candidatos_mercado`, `scouting_resultado`, `adn_boca`, ... |
@@ -149,7 +151,7 @@ Credenciales en `secrets/.env` (no versionado; ver `.env.example`).
 - [ ] Activar scrape real de Reddit (app tipo *script*; hoy 401 → placeholders)
 - [ ] Publicar tweet real (faltan credenciales OAuth 1.0a y `requests-oauthlib`;
       hoy se escribe `data/tweet_top5.txt`)
-- [ ] Sentimiento por jugador del TOTW (hoy solo hype global de la hinchada)
+- [x] Sentimiento por jugador del TOTW (YouTube + prensa multi-medio, prioridad a medios) para el top 3 del tweet
 
 ### Sentimiento (límites)
 VADER está entrenado en inglés; se aplica un lexicón mínimo español-futbolero
@@ -161,7 +163,9 @@ haya datos reales.
 Crear una tarea que ejecute `src/automatizacion.py` (probablemente con
 `python.exe` de Anaconda base) cada lunes. El script corre el radar semanal,
 arma un top 3 de delanteros, mediocampistas y defensores (con club y
-goles+asistencias, para dar variedad de puestos) y deja el borrador en
+goles+asistencias, para dar variedad de puestos) más un top 3 por sentimiento
+(YouTube + prensa multi-medio AR/PE/CL/PY y ESPN/Marca/AS vía Google News RSS,
+con prioridad a los medios) sobre esos 9 jugadores, y deja el borrador en
 `data/tweet_top5.txt`; no publica en Twitter (esa integración está pendiente):
 
 ```powershell

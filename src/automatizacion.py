@@ -1,13 +1,13 @@
 """Automatizacion semanal: radar TOTW -> top 3 por puesto -> borrador de tweet.
 
 Corre el pipeline semanal (FotMob TOTW -> L1 calibrada), arma un top 3 de
-delanteros, mediocampistas y defensores (para dar variedad de puestos) y guarda
-el borrador en `data/tweet_top5.txt`. NO publica: el envio real a Twitter queda
+delanteros, mediocampistas y defensores (para dar variedad de puestos), agrega
+un top 3 por sentimiento (hinchada + medios) sobre esos 9 jugadores y guarda el
+borrador en `data/tweet_top5.txt`. NO publica: el envio real a Twitter queda
 para cuando esten las credenciales y `requests-oauthlib` (fuera del alcance).
 
-El sentimiento (hoy global, no por jugador) esta desacoplado del tweet:
-`hype_actual`/`clasificar_hype`/`cargar_hype` quedan disponibles para reactivar
-la linea de hype cuando exista sentimiento real por jugador.
+`hype_actual`/`clasificar_hype`/`cargar_hype` (sentimiento global legacy) quedan
+sin uso; la linea del tweet usa el sentimiento por jugador de `sentimiento_radar`.
 """
 
 import os
@@ -20,6 +20,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 
 from posiciones import agrupar_posicion
+from sentimiento_radar import calcular_sentimiento, top_por_sentimiento
 
 DATA_DIR = os.path.join(SCRIPT_DIR, '..', 'data')
 SENTIMIENTO_CSV = os.path.join(DATA_DIR, 'sentimiento_hinchada.csv')
@@ -111,19 +112,36 @@ def _linea_puesto(macro, grupo):
     return f'{macro}: ' + ' | '.join(partes)
 
 
-def componer_tweet(seleccion, hype=None):
-    """Arma el borrador: top por puesto con club y goles+asistencias.
+def _jugadores_del_tweet(seleccion):
+    jugadores = []
+    for grupo in seleccion.values():
+        for fila in grupo.itertuples():
+            jugadores.append((getattr(fila, 'nombre'), getattr(fila, 'club', '')))
+    return jugadores
 
-    `hype` queda opcional para reactivar la linea de sentimiento cuando exista
-    una metrica real por jugador; por defecto no se incluye.
-    """
+
+def _linea_sentimiento(sentimiento):
+    partes = [f'{r["nombre"]} ({r["club"]}) {r["sentimiento"]:+.1f}'
+              for r in sentimiento]
+    return 'SENT (hinchada+medios): ' + ' | '.join(partes)
+
+
+def componer_tweet(seleccion, sentimiento=None):
+    """Arma el borrador: top por puesto con club, G+A y top 3 por sentimiento."""
     encabezado = 'ADN Boca - Top por puesto (G+A)'
     lineas = [_linea_puesto(m, g) for m, g in seleccion.items()]
     cola = []
-    if hype is not None:
-        cola.append(f'Hype: {hype:+.2f} ({clasificar_hype(hype)})')
+    if sentimiento:
+        cola.append(_linea_sentimiento(sentimiento))
     cola.append('#Boca #MercadoDePases #Fichajes')
     return '\n'.join([encabezado, *lineas, *cola])
+
+
+def _semana_actual():
+    from scouting_pipeline import ultimo_bloque_semanal_completo
+    inicio, _ = ultimo_bloque_semanal_completo()
+    iso = inicio.isocalendar()
+    return f'{iso.year}-W{iso.week:02d}'
 
 
 def main():
@@ -132,10 +150,19 @@ def main():
     if ranking is None or ranking.empty:
         print('[aviso] Sin jugadores puntuables: no se genera borrador de tweet.')
         return None
-
-    print('\n== Paso 2: borrador de tweet ==')
     seleccion = seleccionar_por_puesto(ranking)
-    texto = componer_tweet(seleccion)
+
+    print('\n== Paso 2: sentimiento (hinchada + medios) ==')
+    semana = _semana_actual()
+    cache_path = os.path.join(DATA_DIR, f'sentimiento_radar_{semana}.csv')
+    jugadores = _jugadores_del_tweet(seleccion)
+    registros = calcular_sentimiento(jugadores, cache_path=cache_path)
+    sentimiento = top_por_sentimiento(registros, 3)
+    con_datos = sum(1 for r in registros if r.get('sentimiento') is not None)
+    print(f'  {con_datos}/{len(jugadores)} jugadores con datos de sentimiento')
+
+    print('\n== Paso 3: borrador de tweet ==')
+    texto = componer_tweet(seleccion, sentimiento)
     with open(TWEET_TXT, 'w', encoding='utf-8') as f:
         f.write(texto + '\n')
     print(texto)

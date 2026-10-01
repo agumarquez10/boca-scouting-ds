@@ -84,14 +84,20 @@ def test_componer_tweet_incluye_club_goles_asistencias_y_puestos():
     assert '#Boca' in texto
 
 
-def test_componer_tweet_sin_hype():
-    texto = componer_tweet(seleccionar_por_puesto(ranking()), hype=None)
-    assert 'Hype:' not in texto
+def test_componer_tweet_sin_sentimiento():
+    texto = componer_tweet(seleccionar_por_puesto(ranking()))
+    assert 'SENT' not in texto
 
 
-def test_componer_tweet_incluye_hype():
-    texto = componer_tweet(seleccionar_por_puesto(ranking()), hype=0.1)
-    assert 'Hype: +0.10 (clima positivo)' in texto
+def test_componer_tweet_incluye_sentimiento():
+    sentimiento = [
+        {'nombre': 'Jugador 1', 'club': 'Club 1', 'sentimiento': 19.6},
+        {'nombre': 'Jugador 2', 'club': 'Club 2', 'sentimiento': 7.2},
+    ]
+    texto = componer_tweet(seleccionar_por_puesto(ranking()), sentimiento)
+    assert 'SENT (hinchada+medios):' in texto
+    assert 'Jugador 1 (Club 1) +19.6' in texto
+    assert 'Jugador 2 (Club 2) +7.2' in texto
 
 
 def test_componer_tweet_incluye_club_con_nombres_largos():
@@ -104,6 +110,6 @@ def test_componer_tweet_incluye_club_con_nombres_largos():
         'goles': [1] * 6,
         'asistencias': [1] * 6,
     })
-    texto = componer_tweet(seleccionar_por_puesto(df), hype=0.2)
+    texto = componer_tweet(seleccionar_por_puesto(df))
     assert 'Club Muy Largo' in texto
     assert texto.rstrip().endswith('#Boca #MercadoDePases #Fichajes')
