@@ -10,12 +10,13 @@ ADN Boca; el siguiente objetivo es sumar sentimiento real y publicar el top 5.
 FotMob Team of the Week + fixtures ─┐
 FotMob playerStats (todos los torneos de club)├─► scouting_pipeline.py ─► ranking_jugadores_fecha_YYYY-Www.csv
 modelo L1 + scaler + encoder ─────────┘                                  │
-                                                                         ├─► sentimiento real (pendiente)
-                                                                         └─► automatización/tweet (pendiente)
+                                                                          ├─► automatizacion.py ─► tweet_top5.txt (borrador)
+                                                                          └─► sentimiento real por jugador (pendiente)
 ```
 
-El prototipo `scouting_mercado.py` y `ranking_acumulado.py` conserva un flujo
-histórico con filtros/deduplicación distintos; no se usa para el nuevo radar.
+Los prototipos `scouting_mercado.py`, `ranking_acumulado.py` y `semanal.py`
+conservan un flujo histórico de mercado con filtros/deduplicación distintos; no
+se usan para el nuevo radar TOTW.
 
 ## Cómo correr
 
@@ -26,8 +27,11 @@ python src/train_model.py
 # 2. Radar de equipos de la fecha (semana ISO completa anterior, UTC)
 python src/scouting_pipeline.py
 
-# 3. La automatización actual aún consume el formato antiguo de mercado
-#    y no está conectada al nuevo ranking semanal
+# 3. Ranking histórico acumulado (apariciones en el top 5 de los rankings semanales)
+python src/ranking_historico.py
+
+# 4. Automatización semanal: corre el radar, arma el top 3 por puesto
+#    (DEL/MED/DEF) y escribe el borrador en data/tweet_top5.txt (no publica)
 python src/automatizacion.py
 ```
 
@@ -41,12 +45,22 @@ liga y temporada del TOTW (matching tolerante al sufijo de fase, p. ej.
 de nombre; si un torneo club no reporta goles/asistencias, el jugador queda sin
 score. `torneos_sin_matches` marca torneos sin reporte de partidos (auditoría,
 no es feature). Si hay fixtures en la semana pero el TOTW aún no está publicado,
-el pipeline lo informa como aviso. Ligas activas: Argentina, Brasil y Perú;
-Ecuador queda en stand by hasta que FotMob publique su TOTW y MLS se quitó a
-pedido del usuario (ambas conservadas con `skip=True` en `ligas.py`). Validación
-live de la semana 21–28/09/2026: Argentina y Perú puntuaron 2 jugadores cada
-una; Brasil en parón de liga. No hacer backfill con perfiles actuales para
-fechas históricas: sus totales pueden incluir partidos posteriores a esa fecha.
+el pipeline lo informa como aviso. Ligas activas: Argentina, Brasil, Perú,
+Chile y Paraguay; Ecuador y Uruguay en stand by (FotMob no publica TOTW para
+esas ligas: el endpoint de rounds devuelve `null`) y MLS quitada a pedido del
+usuario. Validación live de la semana 21–28/09/2026: Argentina y Perú puntuaron
+2+2; Paraguay 2; Brasil y Chile en parón de liga. No hacer backfill con perfiles
+actuales para fechas históricas: sus totales pueden incluir partidos posteriores
+a esa fecha.
+
+### Ranking histórico
+`src/ranking_historico.py` consolida los `ranking_jugadores_fecha_*.csv` por
+`player_id_fotmob` y guarda `data/ranking_historico_acumulado.csv`. Reporta
+`apariciones_top5`, `semanas_en_ranking`, `mejor_posicion`, `score_max/medio` y
+`tasa_top5` (apariciones / semanas en que la liga principal del jugador tuvo
+TOTW). La tasa normaliza el sesgo de volumen de Brasil. Los goles/asistencias
+son acumulados de temporada y se toman de la última aparición, no se suman
+entre semanas.
 
 Los notebooks activos se ejecutan con kernel Python 3 desde Jupyter (`python -m
 jupyter notebook`). `src/model_training.ipynb` es legado: no ejecutarlo para
@@ -97,7 +111,7 @@ probabilidad calibrada para todo el mercado.
 La salida del modelo está reponderada por `class_weight='balanced'` y nunca se
 había calibrado. Se aplica un calibrador **Platt** (sigmoid) ajustado sobre el
 OOF por jugador y guardado en `models/calibrador.pkl` (`src/calibracion.py`).
-En test: **Brier 0.1716 → 0.1595** y **ECE(5) 0.1071 → 0.0645**. Interpretación:
+En test: **Brier 0.1716 → 0.1595** y **ECE(5) 0.1071 → 0.0647**. Interpretación:
 P(etiqueta manual = ADN Boca | features) bajo la distribución de entrenamiento;
 sobre TOTW es una extrapolación (no hay etiquetas de verificación allí). El
 ranking sigue ordenándose por el score bruto: Platt con pendiente `a>0` es
@@ -113,6 +127,7 @@ monotónico y no cambia el orden. La columna aparece en
 | `data/scouting_resultado_historico.csv` | Predicciones del modelo (OOF en train, test directo; con `probabilidad_adn` calibrada) |
 | `data/ranking_jugadores_fecha_YYYY-Www.csv` | Ranking semanal nuevo, una fila por jugador, con score y captura de stats |
 | `data/jugadores_fecha_no_resueltos_YYYY-Www.csv` | TOTW sin cruce/estadísticas completas; no se puntúan |
+| `data/ranking_historico_acumulado.csv` | Apariciones en el top 5 agregadas por jugador sobre todos los rankings semanales |
 | `data/scouting_resultado.csv` | Ranking antiguo de mercado; no lo genera el radar semanal |
 | `data/sentimiento_hinchada.csv` | Comentarios + VADER compound + clasificación |
 | `data/boca_juniors.db` | `candidatos_mercado`, `scouting_resultado`, `adn_boca`, ... |
@@ -125,14 +140,16 @@ Credenciales en `secrets/.env` (no versionado; ver `.env.example`).
 - [x] Esquema de 9 features y validación temporal por jugador de L1/RF
 - [x] MVP offline del radar semanal TOTW → stats por torneo FotMob (todas las competiciones de club) → ranking del modelo
 - [x] Calibración Platt del score (`probabilidad_adn`) validada con Brier/ECE por jugador
-- [x] Validación live de cobertura: Argentina y Perú puntuaron (2+2); Brasil con aviso de parón
-- [ ] Re-activar Ecuador (stand by en `ligas.py`) cuando FotMob publique su TOTW; MLS quitada
+- [x] Validación live de cobertura: Argentina, Perú y Paraguay puntuaron; Brasil/Chile en parón; Uruguay sin TOTW
+- [x] Ranking histórico acumulado de apariciones en el top 5 (`ranking_historico.py`)
+- [ ] Re-activar Ecuador y Uruguay (stand by en `ligas.py`) cuando FotMob publique su TOTW; re-validar Chile cuando haya fechas
 - [x] NLP de sentimiento con fallback a placeholders
-- [x] Script de automatización local; integración con `ranking_jugadores_fecha` pendiente
+- [x] Automatización semanal conectada al radar TOTW (top 3 por puesto → borrador de tweet)
 - [ ] Revocar credenciales antiguas que quedaron en el historial git (la clave actual ya está configurada)
 - [ ] Activar scrape real de Reddit (app tipo *script*; hoy 401 → placeholders)
-- [ ] Publicar tweet real (faltan credenciales OAuth 1.0a; hoy se escribe
-      `data/tweet_top5.txt`)
+- [ ] Publicar tweet real (faltan credenciales OAuth 1.0a y `requests-oauthlib`;
+      hoy se escribe `data/tweet_top5.txt`)
+- [ ] Sentimiento por jugador del TOTW (hoy solo hype global de la hinchada)
 
 ### Sentimiento (límites)
 VADER está entrenado en inglés; se aplica un lexicón mínimo español-futbolero
@@ -142,7 +159,10 @@ haya datos reales.
 ## Automatización semanal (Windows Task Scheduler)
 
 Crear una tarea que ejecute `src/automatizacion.py` (probablemente con
-`python.exe` de Anaconda base) cada lunes:
+`python.exe` de Anaconda base) cada lunes. El script corre el radar semanal,
+arma un top 3 de delanteros, mediocampistas y defensores (con club y
+goles+asistencias, para dar variedad de puestos) y deja el borrador en
+`data/tweet_top5.txt`; no publica en Twitter (esa integración está pendiente):
 
 ```powershell
 schtasks /Create /SC WEEKLY /D MON /ST 09:00 /TN "BocaScouting" /TR "C:\Users\Agu\Desktop\boca-scouting-ds\venv\Scripts\python.exe C:\Users\Agu\Desktop\boca-scouting-ds\src\automatizacion.py"

@@ -37,6 +37,27 @@ LIGAS_FOTMOB = [
         'razon_skip': '',
     },
     {
+        'nombre': 'Uruguay',
+        'fotmob_id': 161,
+        'temporadas_totw': [],
+        'skip': True,
+        'razon_skip': 'Stand by: FotMob no publica TOTW para Uruguay (endpoint rounds = null)',
+    },
+    {
+        'nombre': 'Chile',
+        'fotmob_id': 273,
+        'temporadas_totw': [],
+        'skip': False,
+        'razon_skip': '',
+    },
+    {
+        'nombre': 'Paraguay',
+        'fotmob_id': 199,
+        'temporadas_totw': [],
+        'skip': False,
+        'razon_skip': '',
+    },
+    {
         'nombre': 'USA (MLS)',
         'fotmob_id': 130,
         'temporadas_totw': ['2025'],

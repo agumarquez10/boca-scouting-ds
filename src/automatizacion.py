@@ -1,19 +1,40 @@
+"""Automatizacion semanal: radar TOTW -> top 3 por puesto -> borrador de tweet.
+
+Corre el pipeline semanal (FotMob TOTW -> L1 calibrada), arma un top 3 de
+delanteros, mediocampistas y defensores (para dar variedad de puestos) y guarda
+el borrador en `data/tweet_top5.txt`. NO publica: el envio real a Twitter queda
+para cuando esten las credenciales y `requests-oauthlib` (fuera del alcance).
+
+El sentimiento (hoy global, no por jugador) esta desacoplado del tweet:
+`hype_actual`/`clasificar_hype`/`cargar_hype` quedan disponibles para reactivar
+la linea de hype cuando exista sentimiento real por jugador.
+"""
+
 import os
-import subprocess
 import sys
 
+import numpy as np
 import pandas as pd
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 
+from posiciones import agrupar_posicion
+
 DATA_DIR = os.path.join(SCRIPT_DIR, '..', 'data')
-OUTPUTS_DIR = os.path.join(SCRIPT_DIR, '..', 'outputs')
-NOTEBOOK_NLP = os.path.join(SCRIPT_DIR, 'sentimiento_hinchada.ipynb')
-RANKING_CSV = os.path.join(DATA_DIR, 'scouting_resultado.csv')
 SENTIMIENTO_CSV = os.path.join(DATA_DIR, 'sentimiento_hinchada.csv')
 TWEET_TXT = os.path.join(DATA_DIR, 'tweet_top5.txt')
-TOP_N = 5
+TOP_POR_PUESTO = 3
+
+MACRO_POSICION = {
+    'Delantero': 'DEL',
+    'Extremo': 'DEL',
+    'Mediocampista_ofensivo': 'MED',
+    'Mediocampista_central': 'MED',
+    'Lateral': 'DEF',
+    'Defensor_central': 'DEF',
+}
+ORDEN_PUESTOS = ['DEL', 'MED', 'DEF']
 
 
 def correr_scouting():
@@ -21,18 +42,9 @@ def correr_scouting():
     return scouting_main()
 
 
-def correr_nlp():
-    out = os.path.join(OUTPUTS_DIR, '_sentimiento_ejecutado.ipynb')
-    subprocess.run(
-        [sys.executable, '-m', 'papermill', NOTEBOOK_NLP, out],
-        check=True, capture_output=True,
-    )
-    if not os.path.exists(SENTIMIENTO_CSV):
-        raise FileNotFoundError('sentimiento_hinchada.csv no se generó')
-    return pd.read_csv(SENTIMIENTO_CSV)
-
-
 def hype_actual(sent):
+    """Hype global: neto + positividad de la ultima semana con datos."""
+    sent = sent.copy()
     sent['fecha'] = pd.to_datetime(sent['fecha'])
     ultima = sent['fecha'].max()
     semana = sent[sent['fecha'] >= ultima - pd.Timedelta(days=7)]
@@ -40,9 +52,8 @@ def hype_actual(sent):
         return None
     neto = semana['compound'].mean()
     positividad = (semana['clasificacion'] == 'positivo').mean()
-    volumen = len(semana)
-    atenuacion = min(1.0, __import__('numpy').log1p(volumen) / 3.0)
-    return (0.6 * neto + 0.4 * positividad) * atenuacion
+    atenuacion = min(1.0, np.log1p(len(semana)) / 3.0)
+    return float((0.6 * neto + 0.4 * positividad) * atenuacion)
 
 
 def clasificar_hype(valor):
@@ -57,68 +68,79 @@ def clasificar_hype(valor):
     return 'clima neutral'
 
 
-def componer_tweet(ranking, hype):
-    top = ranking.head(TOP_N)
-    lineas = [f'{i + 1}) {r.nombre} ({r.club_actual}) — prob. {r.probabilidad:.3f}'
-              for i, r in top.iterrows()]
-    texto = [
-        'Ranking semanal ADN Boca',
-        *lineas,
-        f'Hype hinchada: {hype:.3f} ({clasificar_hype(hype)})',
-        '#Boca #MercadoDePases #Fichajes',
-    ]
-    return '\n'.join(texto)
+def cargar_hype(ruta=SENTIMIENTO_CSV):
+    if not os.path.exists(ruta):
+        return None
+    return hype_actual(pd.read_csv(ruta, encoding='utf-8-sig'))
 
 
-def publicar_tweet(texto):
-    api_key = os.getenv('TWITTER_API_KEY')
-    api_secret = os.getenv('TWITTER_API_SECRET')
-    access_token = os.getenv('TWITTER_ACCESS_TOKEN')
-    access_secret = os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
-    if not all([api_key, api_secret, access_token, access_secret]):
-        with open(TWEET_TXT, 'w', encoding='utf-8') as f:
-            f.write(texto + '\n')
-        print(f'[aviso] Sin credenciales de Twitter: tweet guardado en {TWEET_TXT}')
-        return False
-    try:
-        from requests_oauthlib import OAuth1
-        import requests
-    except ImportError:
-        with open(TWEET_TXT, 'w', encoding='utf-8') as f:
-            f.write(texto + '\n')
-        print('[aviso] requests-oauthlib no instalado: tweet guardado en archivo')
-        return False
-    auth = OAuth1(api_key, api_secret, access_token, access_secret)
-    r = requests.post(
-        'https://api.twitter.com/2/tweets', auth=auth,
-        json={'text': texto},
-    )
-    if r.status_code in (200, 201):
-        print('Tweet publicado:', r.json().get('data', {}).get('id'))
-        return True
-    print(f'[error] Twitter respondió {r.status_code}: {r.text[:300]}')
-    return False
+def _macro_posicion(posicion):
+    return MACRO_POSICION.get(agrupar_posicion(posicion))
+
+
+def seleccionar_por_puesto(ranking, n=TOP_POR_PUESTO):
+    """Top N por puesto (DEL/MED/DEF) ordenado por score ADN."""
+    if ranking is None or ranking.empty:
+        return {}
+    col = 'score_adn_boca' if 'score_adn_boca' in ranking.columns else 'probabilidad'
+    df = ranking.copy()
+    df['_macro'] = df['posicion'].map(_macro_posicion)
+    seleccion = {}
+    for macro in ORDEN_PUESTOS:
+        grupo = df[df['_macro'] == macro].sort_values(col, ascending=False).head(n)
+        if not grupo.empty:
+            seleccion[macro] = grupo.reset_index(drop=True)
+    return seleccion
+
+
+def _goles_asistencias(fila):
+    goles = getattr(fila, 'goles', None)
+    asistencias = getattr(fila, 'asistencias', None)
+    faltante = lambda v: v is None or (isinstance(v, float) and np.isnan(v))
+    if faltante(goles) or faltante(asistencias):
+        return 's/d'
+    return f'{int(goles)}+{int(asistencias)}'
+
+
+def _linea_puesto(macro, grupo):
+    partes = []
+    for fila in grupo.itertuples():
+        club = getattr(fila, 'club', '')
+        contexto = f' ({club})' if club else ''
+        partes.append(f'{getattr(fila, "nombre")}{contexto} {_goles_asistencias(fila)}')
+    return f'{macro}: ' + ' | '.join(partes)
+
+
+def componer_tweet(seleccion, hype=None):
+    """Arma el borrador: top por puesto con club y goles+asistencias.
+
+    `hype` queda opcional para reactivar la linea de sentimiento cuando exista
+    una metrica real por jugador; por defecto no se incluye.
+    """
+    encabezado = 'ADN Boca - Top por puesto (G+A)'
+    lineas = [_linea_puesto(m, g) for m, g in seleccion.items()]
+    cola = []
+    if hype is not None:
+        cola.append(f'Hype: {hype:+.2f} ({clasificar_hype(hype)})')
+    cola.append('#Boca #MercadoDePases #Fichajes')
+    return '\n'.join([encabezado, *lineas, *cola])
 
 
 def main():
-    from dotenv import load_dotenv
-    from rutas import dir_secrets
-    load_dotenv(os.path.join(dir_secrets(), '.env'))
+    print('== Paso 1: radar semanal TOTW ==')
+    ranking = correr_scouting()
+    if ranking is None or ranking.empty:
+        print('[aviso] Sin jugadores puntuables: no se genera borrador de tweet.')
+        return None
 
-    print('== Paso 1: ranking de candidatos ==')
-    correr_scouting()
-    ranking = pd.read_csv(RANKING_CSV)
-
-    print('\n== Paso 2: sentimiento de la hinchada ==')
-    sent = correr_nlp()
-    hype = hype_actual(sent)
-
-    print('\n== Paso 3: tweet top-5 ==')
-    texto = componer_tweet(ranking, hype)
-    print('--- borrador ---')
+    print('\n== Paso 2: borrador de tweet ==')
+    seleccion = seleccionar_por_puesto(ranking)
+    texto = componer_tweet(seleccion)
+    with open(TWEET_TXT, 'w', encoding='utf-8') as f:
+        f.write(texto + '\n')
     print(texto)
-    print('----------------')
-    publicar_tweet(texto)
+    print(f'\n({len(texto)} caracteres) guardado en {TWEET_TXT}')
+    return texto
 
 
 if __name__ == '__main__':

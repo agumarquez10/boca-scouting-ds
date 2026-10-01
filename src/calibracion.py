@@ -33,10 +33,9 @@ def ajustar_platt(oof, y, reporte='OOF'):
     if len(np.unique(y)) < 2:
         raise ValueError('platt requiere ambas clases en y')
     z = _logit(oof).reshape(-1, 1)
-    # Sin regularización: penalty=None es el default de sklearn>=1.8 (equivale
-    # a C=inf) y no emite warnings si no se pasa C. El mapeo debe reflejar la
-    # frecuencia observada, no simplificar.
-    modelo = LogisticRegression(solver='lbfgs')
+    # C=1e10 ≈ sin regularización (equivale a C=inf) sin emitir el warning de
+    # sklearn 1.8 que convierte C=inf en penalty=None internamente.
+    modelo = LogisticRegression(C=1e10, solver='lbfgs')
     modelo.fit(z, y)
     a = float(modelo.coef_[0][0])
     b = float(modelo.intercept_[0])
