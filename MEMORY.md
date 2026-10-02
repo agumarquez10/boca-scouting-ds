@@ -13,7 +13,8 @@
 - Validación live 21–28/09/2026: Argentina/Perú 2+2; Paraguay 2; Brasil y Chile en parón. Semanas W34–W39/2026 guardadas (22–29 jugadores); W40 (28/09–05/10) sin TOTW por fecha FIFA.
 - Ranking histórico: `src/ranking_historico.py` agrega los CSV semanales por `player_id_fotmob` → `data/ranking_historico_acumulado.csv` (116 jugadores, 6 semanas; líder Matheus Pereira 3/5). Reporta `apariciones_top5`, `tasa_top5` (normaliza el volumen de Brasil), score max/medio.
 - Tests: 69 pasaron, 0 warnings (fix sklearn 1.8: `C=np.inf` → `C=1e10` en `ajustar_platt`). EDA: 39 celdas, validado.
-- Landing `web/`: `src/landing_data.py` → `web/data.js` (`window.RADAR_DATA`), páginas estáticas sin servidor ni build (doble click). Muestra planilla semanal (top 5 por score), borradores y histórico con orden/búsqueda/filtro. Offline: no consulta la API ni recalcula el modelo.
+- Landing `web/`: `src/landing_data.py` → `web/data.js` (`window.RADAR_DATA`), estática sin servidor ni build (doble click). Muestra planilla semanal, borradores e histórico con orden/búsqueda/filtro. Offline: no consulta la API ni recalcula el modelo.
+- La landing no muestra el score ni `probabilidad_adn` (el usuario lo pidió: "no aporta") ni la sección de deudas: el top 5 sigue ordenado por score, pero `data.js` ya no exporta esos campos. Para volver a mostrar un número hay que tocar `landing_data.py`.
 - `automatizacion.py` corre el radar TOTW → top 3 por puesto (DEL/MED/DEF; extremos→DEL, laterales→DEF) con club + G+A → top 3 por sentimiento (YouTube 40% + prensa multi-medio 60% vía `sentimiento_radar.py`, caché semanal) sobre esos 9 → borrador `data/tweet_top5.txt` (no publica). `hype_*`, `model_training.ipynb`, `scouting_mercado.py`, `semanal.py` y `ranking_acumulado.py` quedan legado.
 
 ## 2. Decisiones tomadas y por qué

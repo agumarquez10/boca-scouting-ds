@@ -10,7 +10,6 @@
   var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
     'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
-  var dec2 = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   var dec1 = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   var pct = new Intl.NumberFormat('es-AR', { style: 'percent', maximumFractionDigits: 0 });
   var SIN_TILDES = /[\u0300-\u036f]/g;
@@ -37,10 +36,6 @@
 
   function rangoSemana(semana) {
     return rango(semana.inicio) + ' al ' + rango(semana.fin);
-  }
-
-  function score(valor) {
-    return valor === null || valor === undefined ? '—' : dec2.format(valor);
   }
 
   function pintarBug(semana) {
@@ -89,7 +84,6 @@
       cabecera.appendChild(el('span'));
       cabecera.appendChild(el('span', null, 'Candidato'));
       cabecera.appendChild(el('span', null, 'Goles y asistencias'));
-      cabecera.appendChild(el('span', null, 'Score ADN'));
       caja.appendChild(cabecera);
 
       semana.top.forEach(function (j) {
@@ -109,13 +103,6 @@
         ga.appendChild(el('small', null, j.partidos_temporada + ' partidos'));
         fila.appendChild(ga);
 
-        var puntos = el('p', 'fila__score');
-        puntos.appendChild(el('b', null, score(j.score)));
-        var barra = el('span', 'fila__barra');
-        barra.style.width = Math.max(2, Math.round(j.score * 100)) + '%';
-        puntos.appendChild(barra);
-        fila.appendChild(puntos);
-
         caja.appendChild(fila);
       });
     }
@@ -124,9 +111,8 @@
     cinta.textContent = '';
     cinta.appendChild(itemCinta('Candidatos en el ranking', String(semana.jugadores)));
     cinta.appendChild(itemCinta('Ligas con equipo de la fecha', String(semana.ligas.length)));
-    if (semana.top.length) {
-      cinta.appendChild(itemCinta('Score más alto', score(semana.top[0].score)));
-      cinta.appendChild(itemCinta('Probabilidad calibrada del líder', pct.format(semana.top[0].probabilidad_adn)));
+    if (!semana.top.length) {
+      cinta.appendChild(itemCinta('Semanas guardadas', String(semanas.length)));
     }
   }
 
@@ -221,7 +207,6 @@
     apariciones_top5: function (j) { return j.apariciones_top5; },
     tasa_top5: function (j) { return j.tasa_top5; },
     mejor_posicion: function (j) { return j.mejor_posicion; },
-    score_max: function (j) { return j.score_max; },
     goles: function (j) { return (j.goles === null ? -1 : j.goles) + (j.asistencias || 0) / 100; },
     ultima_semana: function (j) { return j.ultima_semana; }
   };
@@ -267,7 +252,6 @@
     tr.appendChild(el('td', null, j.apariciones_top5));
     tr.appendChild(el('td', null, pct.format(j.tasa_top5)));
     tr.appendChild(el('td', null, j.mejor_posicion));
-    tr.appendChild(el('td', null, score(j.score_max)));
     tr.appendChild(el('td', null, j.goles === null ? '—' : j.goles + '+' + j.asistencias));
     tr.appendChild(el('td', null, j.ultima_semana));
     return tr;

@@ -90,7 +90,6 @@
               <th scope="col" data-orden="apariciones_top5"><button type="button">Top 5</button></th>
               <th scope="col" data-orden="tasa_top5"><button type="button">Tasa</button></th>
               <th scope="col" data-orden="mejor_posicion"><button type="button">Mejor</button></th>
-              <th scope="col" data-orden="score_max"><button type="button">Score máx.</button></th>
               <th scope="col" data-orden="goles"><button type="button">G+A</button></th>
               <th scope="col" data-orden="ultima_semana"><button type="button">Última</button></th>
             </tr>
@@ -124,7 +123,7 @@
             <li><b>Equipo de la fecha y fixtures</b> de la semana ISO anterior, en UTC.</li>
             <li><b>Perfil de temporada</b>: goles y asistencias de todos los torneos de club, no solo la liga, para no subestimar a los que juegan copas.</li>
             <li><b>Modelo y calibrador</b> guardados en <code>models/</code>. La inferencia nunca recalcula.</li>
-            <li><b>Ranking semanal</b> ordenado por score crudo, más un CSV aparte con los equipos de la fecha que no se pudieron resolver.</li>
+            <li><b>Ranking semanal</b> ordenado por el score del modelo, más un CSV aparte con los equipos de la fecha que no se pudieron resolver.</li>
             <li><b>Sentimiento</b> por jugador: comentarios de YouTube (40%) y prensa deportiva (60%), en una escala de −50 a +50.</li>
           </ol>
         </article>
@@ -145,17 +144,6 @@
             <div><dt>Split de test</dt><dd>última temporada ≥ 2023</dd></div>
           </dl>
           <p class="metodo__pie">El calibrador Platt corrige dos cosas a la vez: el peso de clase, que reordena las probabilidades, y la falta de calibración. Como su pendiente es positiva, no cambia el orden del ranking.</p>
-        </article>
-
-        <article class="metodo__item">
-          <h3>Lo que todavía no está</h3>
-          <ul class="deudas">
-            <li>El score ordena candidatos del equipo de la fecha; no es una probabilidad verificada sobre ese universo, y <code>probabilidad_adn</code> se calibra bajo la distribución del entrenamiento.</li>
-            <li>El sentimiento tiene cobertura despareja: el motor es en español, así que los medios en portugués quedan fuera y las ligas lejanas llegan sin datos. Sin datos no es cero.</li>
-            <li>Las publicaciones siguen siendo borradores: faltan las credenciales OAuth 1.0a para salir solo.</li>
-            <li>Ecuador y Uruguay están en stand by porque FotMob todavía no publica su equipo de la fecha. MLS salió del radar.</li>
-            <li>Brasil y Chile entran en parón en algunas fechas. Esas semanas no generan candidatos y no es una caída del modelo.</li>
-          </ul>
         </article>
       </div>
     </div>

@@ -229,7 +229,7 @@ a { color: inherit; }
 
 .planilla__cabecera {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 96px 108px;
+  grid-template-columns: 44px minmax(0, 1fr) 108px;
   gap: 20px;
   padding: 0 0 10px;
   border-bottom: 1px solid var(--linea);
@@ -242,11 +242,11 @@ a { color: inherit; }
 
 .fila {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 96px 108px;
+  grid-template-columns: 44px minmax(0, 1fr) 108px;
   grid-template-rows: auto auto;
   grid-template-areas:
-    'lugar nombre ga score'
-    'lugar meta   ga score';
+    'lugar nombre ga'
+    'lugar meta   ga';
   align-items: center;
   gap: 0 20px;
   padding: 15px 0;
@@ -307,24 +307,6 @@ a { color: inherit; }
   font-size: 11px;
   font-weight: 400;
   color: var(--pluma);
-}
-
-.fila__score { grid-area: score; text-align: right; }
-
-.fila__score b {
-  display: block;
-  font-family: var(--display);
-  font-size: 34px;
-  line-height: 1;
-  font-weight: 400;
-  color: var(--oro);
-}
-
-.fila__barra {
-  display: block;
-  height: 3px;
-  margin-top: 6px;
-  background: var(--oro);
 }
 
 .cinta {
@@ -532,7 +514,7 @@ h2 {
 .tabla td:nth-child(2) small { display: block; font-weight: 400; font-size: 12px; color: var(--pluma); }
 .tabla td:nth-child(4) { padding-right: 26px; }
 .tabla td:nth-child(5) { font-weight: 600; }
-.tabla td:nth-child(10) { color: var(--pluma); font-size: 13px; }
+.tabla td:nth-child(9) { color: var(--pluma); font-size: 13px; }
 
 .tabla tbody tr:hover { background: var(--pizarra-2); }
 
@@ -645,19 +627,6 @@ h2 {
 .metricas s { color: var(--pluma); font-weight: 400; margin-right: 10px; }
 .metricas b { font-family: var(--display); font-weight: 400; font-size: 19px; color: var(--oro); }
 
-.deudas {
-  margin: 0;
-  padding: 0 0 0 18px;
-  display: grid;
-  gap: 10px 40px;
-}
-.metodo__item:last-child { grid-column: 1 / -1; }
-.metodo__item:last-child .deudas {
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-}
-.deudas li { font-size: 14.5px; color: var(--pluma); }
-.deudas li::marker { color: var(--oro); }
-
 /* ---------- pie ---------- */
 
 .pie {
@@ -700,10 +669,9 @@ h2 {
 
 @media (max-width: 900px) {
   .planilla__cabecera,
-  .fila { grid-template-columns: 34px minmax(0, 1fr) 82px 88px; }
+  .fila { grid-template-columns: 34px minmax(0, 1fr) 90px; }
   .fila { column-gap: 12px; }
   .fila__nombre { font-size: 18px; }
-  .fila__score b { font-size: 28px; }
   .radar__intro { grid-template-columns: 1fr; }
   .radar__intro h1 { grid-column: 1; grid-row: auto; margin-bottom: 8px; }
   .radar__intro p { grid-column: 1; }
@@ -721,10 +689,7 @@ h2 {
   .bloque { padding: 52px 0; }
   .planilla__cabecera { display: none; }
   .fila {
-    grid-template-columns: 28px minmax(0, 1fr) 84px;
-    grid-template-areas:
-      'lugar nombre score'
-      'lugar meta   ga';
+    grid-template-columns: 28px minmax(0, 1fr) 80px;
     row-gap: 6px;
     padding: 16px 0;
   }

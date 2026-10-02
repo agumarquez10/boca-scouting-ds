@@ -22,9 +22,11 @@ metadatos del modelo. Es una lectura de los CSV y de `models/`: no consulta la
 API ni recalcula el modelo. La página (`web/index.html` + `styles.css` + `app.js`)
 es estática y se abre con doble click, sin servidor ni build.
 
-Muestra la planilla de la semana (top 5 por score crudo, con selector de semana),
-los borradores semanales y el histórico con búsqueda, filtro por liga y orden por
-columna. Los borradores se recomponen con `automatizacion.componer_tweet` sobre
+Muestra la planilla de la semana (top 5 ordenados por el score del modelo, con
+selector de semana), los borradores semanales y el histórico con búsqueda,
+filtro por liga y orden por columna. A pedido del usuario la página **no
+muestra el score ni la probabilidad calibrada**: el orden viene del modelo pero
+el número no se publica, y `data.js` ni siquiera lo exporta. Los borradores se recomponen con `automatizacion.componer_tweet` sobre
 los rankings guardados: solo el sentimiento que está cacheado para esa semana
 (`sentimiento_radar_YYYY-Www.csv`) entra al texto, y lo que falta se muestra como
 "sin sentimiento medido".

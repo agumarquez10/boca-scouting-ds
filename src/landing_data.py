@@ -95,9 +95,6 @@ def _jugador(fila, lugar=None):
         'asistencias': _int(fila.get('asistencias')),
         'partidos_temporada': _int(fila.get('partidos_temporada')),
         'torneos': fila.get('torneos_stats') if isinstance(fila.get('torneos_stats'), str) else '',
-        'score': _num(fila.get('score_adn_boca'), 6),
-        'probabilidad_adn': _num(fila.get('probabilidad_adn'), 6),
-        'rating_totw': _num(fila.get('rating_totw'), 1),
     }
 
 
@@ -162,8 +159,6 @@ def construir_historico(directorio):
             'semanas_activas_liga': _int(f['semanas_activas_liga']),
             'tasa_top5': _num(f['tasa_top5'], 3),
             'mejor_posicion': _int(f['mejor_posicion']),
-            'score_max': _num(f['score_max'], 6),
-            'probabilidad_adn_media': _num(f['probabilidad_adn_media'], 6),
             'goles': _int(f.get('goles')),
             'asistencias': _int(f.get('asistencias')),
             'ultima_semana': f['ultima_semana'],
