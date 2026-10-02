@@ -196,7 +196,6 @@ var sent = el('span', 'puesto__sent');
     });
   }
 
-  var FUENTES = ['\u2014', 'solo prensa', 'prensa y YouTube'];
   var TOP_SENTIMIENTO = 5;
 
   function barraSentimiento(valor, tope) {
@@ -225,19 +224,14 @@ var sent = el('span', 'puesto__sent');
       nombre.appendChild(el('small', null, j.club));
       tr.appendChild(nombre);
 
-      var celda = el('td', 'celda-sent');
-      celda.appendChild(barraSentimiento(j.sentimiento_medio, tope));
-      celda.appendChild(el('b', j.sentimiento_medio < 0 ? 'neg' : 'pos',
+var celda = el('td');
+      var interior = el('div', 'celda-sent');
+      interior.appendChild(barraSentimiento(j.sentimiento_medio, tope));
+      interior.appendChild(el('b', j.sentimiento_medio < 0 ? 'neg' : 'pos',
         (j.sentimiento_medio > 0 ? '+' : '') + dec1.format(j.sentimiento_medio)));
+      celda.appendChild(interior);
       tr.appendChild(celda);
 
-      tr.appendChild(el('td', null, j.semanas_medidas));
-      var rango = j.semanas_medidas === 1;
-      tr.appendChild(el('td', null, rango ? '\u2014'
-        : (j.sentimiento_max > 0 ? '+' : '') + dec1.format(j.sentimiento_max)));
-      tr.appendChild(el('td', null, rango ? '\u2014'
-        : (j.sentimiento_min > 0 ? '+' : '') + dec1.format(j.sentimiento_min)));
-      tr.appendChild(el('td', null, FUENTES[j.fuentes] || '\u2014'));
       cuerpo.appendChild(tr);
     });
   }

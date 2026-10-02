@@ -32,12 +32,12 @@
 - ECE mide la brecha confianza-frecuencia, no el spread de las predicciones; con p=C y frecuencia=C el ECE es 0 aunque el Brier sea malo.
 - En sklearn>=1.8 `C=np.inf` se convierte en `penalty=None` y emite warning; usar `C=1e10` para el Platt sin regularización (regla AGENTS: sin warnings).
 - No convertir faltantes en cero, no puntuar perfiles con liga/club/temporada incompatibles; las features históricas son por jugador-temporada, no usar goles/asistencias de un solo partido. En tests, `monkeypatch.setattr(modulo, 'funcion')` no alcanza si el runner hizo `from x import funcion`: hay que parchear donde se usó el nombre, si no la prueba pega contra la API real.
+- Nunca poner `display: flex` (o grid) sobre un `<td>`/`<th>`: lo saca del layout de tabla, el navegador lo envuelve en una celda anónima y el `border-bottom` se pinta debajo del contenido, así que las líneas de la fila no cierran. Meter un `div` adentro y flexear eso.
 - No usar stats actuales para backfill histórico; no usar `rating` como feature; no reportar P@10 de filas repetidas como 10 jugadores únicos. API-Football Free rechazó stats 2026; Highlightly y Promiedos sin cobertura completa: fuera del flujo. El uso live de FotMob refresca `api_cache` en SQLite: pedir aprobación antes de consultar (ya se coló una vez por un test que parcheaba el módulo equivocado).
-- En tests, `monkeypatch.setattr(modulo, 'funcion')` no alcanza si el runner hizo `from x import funcion`: hay que parchear donde se usó el nombre. Si no, la prueba pega contra la API real.
 - En tests, `monkeypatch.setattr(modulo, 'funcion')` no alcanza si el runner hizo `from x import funcion`: hay que parchear donde se usó el nombre. Si no, la prueba pega contra la API real.
 - La métrica de sentimiento es **reproducible**: los 4 jugadores medidos en más de una semana dan valores casi idénticos entre semanas (Hulk +0.4/+0.4; Samuel Lino +0.3/+0.3; Igor Formiga +2.6/+2.5/+2.5; Matheus Pereira +0.1/+0.1/+0.6). El nivel es bajo (mediana +0.75, rango -3.2 a +8.9) pero el orden dentro de cada semana es consistente entre corridas. YouTube promedia 2.2 contra 0.24 de la prensa: la prensa aporta casi nada de señal y sin embargo pesa 0.6.
 - El sentimiento histórico **no es una serie temporal**: se consulta hoy sobre jugadores de Those TOTW, así que mide mención actual, no clima de esa fecha. No usar como "hinchada de la semana X".
-- Chrome headless en Windows no baja de 500 px de viewport: un screenshot de 390 px sale recortado y parece overflow. Para probar mobile de verdad, cargar la página en un `<iframe>` de 390 px. Además `strftime('%B')` devuelve el mes en inglés: la landing arma las fechas a mano (`MESES` en `web/app.js`).
+- Chrome headless en Windows no baja de 500 px de viewport: un screenshot de 390 px sale recortado y parece overflow. Para probar mobile de verdad, cargar la página en un `<iframe>` de 390 px; con `--force-device-scale-factor=2` + recorte se ven los bugs de alineación fina. Además `strftime('%B')` devuelve el mes en inglés: la landing arma las fechas a mano (`MESES`).
 
 ## 4. Próximos pasos
 1. Publicar tweet real: faltan credenciales OAuth 1.0a y `requests-oauthlib`; hoy solo borrador (y la landing lo muestra como tal).
@@ -46,5 +46,5 @@
 4. Re-activar Ecuador/Uruguay cuando FotMob publique TOTW; decidir si programar la corrida en el Programador de tareas (hoy se corre a mano).
 
 ## Estado Git observado
-- El usuario commiteó la landing (3 commits, último `a3f3e3a correcciones landing`) y también `src/corrida_semanal.py` + sus tests.
-- Sin commit de este trabajo: `src/landing_data.py`, `tests/test_landing_data.py`, `web/` (app.js, styles.css, data.js), `README.md`, `MEMORY.md`.
+- El usuario commiteó la landing, `corrida_semanal.py`, `sentimiento_historico.py` y sus tests.
+- Sin commit de este trabajo: `web/` (index.html, styles.css, app.js), `README.md`, `MEMORY.md`.

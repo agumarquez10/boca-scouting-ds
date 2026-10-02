@@ -41,15 +41,15 @@ tres lugares: sin `sentimiento_radar_YYYY-Www.csv` para esa semana muestra
 
 La sección **La reacción de la hinchada** lee lo que deja
 `sentimiento_historico.py` (`data/sentimiento_historico.csv` y su consolidado),
-sin recalcular nada: la cobertura en una cinta y una tabla con el **top 5** de
-los 44 jugadores medidos (en el orden del consolidado: pico y después media), con
-la reacción media en barra divergente (cero al centro, jade arriba / sirena
-abajo), semanas medidas, pico, piso y con qué fuentes se midió. Pico y piso quedan
-vacíos cuando el jugador tiene una sola medición, porque con un dato no hay
-rango. El desglose por jugador (prensa y/o YouTube) queda como tooltip en el
-valor de los cuadros por puesto. Ojo con el límite metodológico: el sentimiento
-se consulta el día que corre el script, no en la fecha de la semana, así que
-mide cómo se menciona hoy a los jugadores de aquel equipo de la fecha.
+sin recalcular nada: la cobertura en una cinta (jugadores, mediciones, cuántos
+tienen las dos fuentes y la escala) y una tabla de tres columnas con el **top 5**
+de los 44 jugadores medidos, en el orden del consolidado (pico y después media).
+La reacción media va en barra divergente, con el cero al centro y jade hacia
+arriba / sirena hacia abajo. El desglose por jugador (prensa y/o YouTube) queda
+como tooltip en el valor de los cuadros por puesto. Ojo con el límite
+metodológico: el sentimiento se consulta el día que corre el script, no en la
+fecha de la semana, así que mide cómo se menciona hoy a los jugadores de aquel
+equipo de la fecha.
 
 `web/data.js` sigue exportando el histórico completo de apariciones aunque la
 página no lo muestre, porque `corrida_semanal.py` lo lee en su log

@@ -452,21 +452,29 @@ h2 {
 
 /* ---------- sentimiento ---------- */
 
+.tabla--sent { max-width: 880px; }
+
 .celda-sent {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
-.celda-sent b { font-weight: 600; min-width: 42px; text-align: right; }
+.celda-sent b {
+  margin-left: auto;
+  font-weight: 600;
+  min-width: 46px;
+  text-align: right;
+}
 .celda-sent b.pos { color: var(--jade); }
 .celda-sent b.neg { color: var(--sirena); }
 
 .barra-sent {
   position: relative;
   display: block;
-  width: 130px;
-  height: 11px;
+  flex: 1;
+  max-width: 520px;
+  height: 14px;
   background: rgba(139, 154, 182, 0.09);
 }
 .barra-sent::after {
@@ -495,10 +503,6 @@ h2 {
 }
 .barra-mini--pos { background: var(--jade); }
 .barra-mini--neg { background: var(--sirena); }
-
-.tabla--sent td:nth-child(5),
-.tabla--sent td:nth-child(6) { font-size: 13px; color: var(--pluma); }
-.tabla--sent td:nth-child(7) { font-size: 13px; color: var(--pluma); }
 
 /* ---------- tabla ---------- */
 
