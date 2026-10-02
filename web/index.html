@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADN Boca · radar semanal de jugadores</title>
+<meta name="description" content="Ranking semanal de los equipos de la fecha de FotMob en cinco ligas, ordenado por un modelo entrenado con etiquetas manuales de ADN Boca, con sentimiento de hinchada y prensa.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="salta" href="#radar">Ir al radar</a>
+
+<header class="masthead">
+  <div class="masthead__fila">
+    <a class="marca" href="#radar">
+      <span class="marca__escudo" aria-hidden="true">CB</span>
+      <span class="marca__texto">ADN Boca<em>radar semanal</em></span>
+    </a>
+    <nav class="nav" aria-label="Secciones">
+      <a href="#radar">Radar</a>
+      <a href="#tweets">Publicaciones</a>
+      <a href="#historico">Histórico</a>
+      <a href="#metodo">Método</a>
+    </nav>
+    <p class="bug">
+      <span class="bug__valor" data-campo="clave">—</span>
+      <span class="bug__rango" data-campo="rango"></span>
+    </p>
+  </div>
+</header>
+
+<main>
+  <section class="radar" id="radar">
+    <div class="grilla">
+      <div class="radar__intro">
+        <h1>Quién se parece más a Boca, cada semana.</h1>
+        <p>FotMob publica el equipo de la fecha de cada liga. El modelo toma esos nombres, les arma el perfil de la temporada y los ordena por parecido con las etiquetas manuales de ADN Boca: delanteros que llegan, extremos que rompen el partido, volantes que hacen la diferencia.</p>
+        <p class="radar__nota">El universo cambia cada semana. Si una liga está en parón, o si FotMob todavía no publicó su equipo de la fecha, esa liga no aporta candidatos. Brasil suele meter más nombres que el resto, así que el histórico también muestra la tasa normalizada por liga.</p>
+      </div>
+
+      <div class="selector" role="group" aria-label="Elegir semana" id="selector-semana"></div>
+
+      <div class="planilla" id="planilla" aria-live="polite"></div>
+
+      <dl class="cinta" id="cinta"></dl>
+    </div>
+  </section>
+
+  <section class="bloque" id="tweets">
+    <div class="grilla">
+      <div class="bloque__cabecera">
+        <h2>Los borradores de la semana</h2>
+        <p>El programa arma un borrador por semana: el mejor de cada puesto con sus goles y asistencias, más los tres con mejor reacción de la hinchada y de la prensa. Esta página los reconstruye desde los rankings ya guardados. No se publica solo porque todavía faltan las credenciales de Twitter.</p>
+      </div>
+      <div class="tweets" id="lista-tweets"></div>
+    </div>
+  </section>
+
+  <section class="bloque" id="historico">
+    <div class="grilla">
+      <div class="bloque__cabecera">
+        <h2>Histórico del radar</h2>
+        <p>Consolidado por identidad de jugador y no por nombre: cada fila cuenta en cuántas semanas entró al top 5. La guía compara esas apariciones contra las semanas en que su liga tuvo equipo de la fecha, así el volumen de Brasil no infla el ranking.</p>
+      </div>
+
+      <div class="filtros">
+        <label class="campo">
+          <span>Buscar jugador o club</span>
+          <input type="search" id="buscar" autocomplete="off" placeholder="Hulk, Cruzeiro, Lanús">
+        </label>
+        <label class="campo campo--corto">
+          <span>Liga</span>
+          <select id="filtro-liga"><option value="">Todas</option></select>
+        </label>
+        <p class="filtros__conteo" id="conteo" aria-live="polite"></p>
+      </div>
+
+      <div class="tabla-wrap">
+        <table class="tabla" id="tabla-historico">
+          <caption class="oculto">Histórico de apariciones en el top 5 por jugador</caption>
+          <thead>
+            <tr>
+              <th scope="col" data-orden="posicion"><button type="button">#</button></th>
+              <th scope="col" data-orden="nombre"><button type="button">Jugador</button></th>
+              <th scope="col" data-orden="liga"><button type="button">Liga</button></th>
+              <th scope="col" data-orden="guia" class="sin-orden"><span>Guía</span></th>
+              <th scope="col" data-orden="apariciones_top5"><button type="button">Top 5</button></th>
+              <th scope="col" data-orden="tasa_top5"><button type="button">Tasa</button></th>
+              <th scope="col" data-orden="mejor_posicion"><button type="button">Mejor</button></th>
+              <th scope="col" data-orden="score_max"><button type="button">Score máx.</button></th>
+              <th scope="col" data-orden="goles"><button type="button">G+A</button></th>
+              <th scope="col" data-orden="ultima_semana"><button type="button">Última</button></th>
+            </tr>
+          </thead>
+          <tbody id="cuerpo-tabla"></tbody>
+        </table>
+      </div>
+
+      <p class="tabla__pie">
+        <button type="button" id="ver-todos" class="ver-todos" hidden></button>
+      </p>
+
+      <ul class="leyenda">
+        <li><i class="celda celda--llena"></i>Entró al top 5 esa semana</li>
+        <li><i class="celda celda--ranking"></i>Estaba en el ranking, fuera del top 5</li>
+        <li><i class="celda"></i>La liga tuvo equipo de la fecha y el jugador no entró al ranking</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="bloque" id="metodo">
+    <div class="grilla">
+      <div class="bloque__cabecera">
+        <h2>Cómo está hecho</h2>
+      </div>
+
+      <div class="metodo">
+        <article class="metodo__item">
+          <h3>El camino de los datos</h3>
+          <ol class="flujo">
+            <li><b>Equipo de la fecha y fixtures</b> de la semana ISO anterior, en UTC.</li>
+            <li><b>Perfil de temporada</b>: goles y asistencias de todos los torneos de club, no solo la liga, para no subestimar a los que juegan copas.</li>
+            <li><b>Modelo y calibrador</b> guardados en <code>models/</code>. La inferencia nunca recalcula.</li>
+            <li><b>Ranking semanal</b> ordenado por score crudo, más un CSV aparte con los equipos de la fecha que no se pudieron resolver.</li>
+            <li><b>Sentimiento</b> por jugador: comentarios de YouTube (40%) y prensa deportiva (60%), en una escala de −50 a +50.</li>
+          </ol>
+        </article>
+
+        <article class="metodo__item">
+          <h3>El modelo</h3>
+          <p>Regresión logística con penalización L1, las nueve features de abajo y <code>class_weight='balanced'</code> por el desbalance de 2,4 a 1.</p>
+          <ul class="features" id="features"></ul>
+          <p class="metodo__pie">La etiqueta es criterio manual, no una fórmula. Por eso el rating queda fuera de las features a propósito.</p>
+        </article>
+
+        <article class="metodo__item">
+          <h3>Validación</h3>
+          <p>El split es por jugador y no por fila: nadie puede estar en train y test. La cross-validation también agrupa por jugador, porque sin agrupar el out-of-fold se infla cerca de 0,03 de AUPRC.</p>
+          <dl class="metricas">
+            <div><dt>Brier en test</dt><dd><s>0,1716</s><b>0,1595</b></dd></div>
+            <div><dt>ECE con 5 bins</dt><dd><s>0,1071</s><b>0,0647</b></dd></div>
+            <div><dt>Split de test</dt><dd>última temporada ≥ 2023</dd></div>
+          </dl>
+          <p class="metodo__pie">El calibrador Platt corrige dos cosas a la vez: el peso de clase, que reordena las probabilidades, y la falta de calibración. Como su pendiente es positiva, no cambia el orden del ranking.</p>
+        </article>
+
+        <article class="metodo__item">
+          <h3>Lo que todavía no está</h3>
+          <ul class="deudas">
+            <li>El score ordena candidatos del equipo de la fecha; no es una probabilidad verificada sobre ese universo, y <code>probabilidad_adn</code> se calibra bajo la distribución del entrenamiento.</li>
+            <li>El sentimiento tiene cobertura despareja: el motor es en español, así que los medios en portugués quedan fuera y las ligas lejanas llegan sin datos. Sin datos no es cero.</li>
+            <li>Las publicaciones siguen siendo borradores: faltan las credenciales OAuth 1.0a para salir solo.</li>
+            <li>Ecuador y Uruguay están en stand by porque FotMob todavía no publica su equipo de la fecha. MLS salió del radar.</li>
+            <li>Brasil y Chile entran en parón en algunas fechas. Esas semanas no generan candidatos y no es una caída del modelo.</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="pie">
+  <div class="grilla">
+    <p>Origen de los datos: FotMob, equipos de la fecha y <code>playerStats</code>. Página generada el <span id="generado"></span>.</p>
+    <p>Para refrescar los datos de la página: <code>python src/landing_data.py</code></p>
+  </div>
+</footer>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

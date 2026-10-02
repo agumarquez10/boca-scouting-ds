@@ -14,6 +14,21 @@ modelo L1 + scaler + encoder ─────────┘                     
                                                                           └─► sentimiento real por jugador (pendiente)
 ```
 
+## Página del radar (`web/`)
+
+`src/landing_data.py` arma `web/data.js` (un global `window.RADAR_DATA`) con los
+rankings semanales, el sentimiento ya cacheado, el histórico consolidado y los
+metadatos del modelo. Es una lectura de los CSV y de `models/`: no consulta la
+API ni recalcula el modelo. La página (`web/index.html` + `styles.css` + `app.js`)
+es estática y se abre con doble click, sin servidor ni build.
+
+Muestra la planilla de la semana (top 5 por score crudo, con selector de semana),
+los borradores semanales y el histórico con búsqueda, filtro por liga y orden por
+columna. Los borradores se recomponen con `automatizacion.componer_tweet` sobre
+los rankings guardados: solo el sentimiento que está cacheado para esa semana
+(`sentimiento_radar_YYYY-Www.csv`) entra al texto, y lo que falta se muestra como
+"sin sentimiento medido".
+
 Los prototipos `scouting_mercado.py`, `ranking_acumulado.py` y `semanal.py`
 conservan un flujo histórico de mercado con filtros/deduplicación distintos; no
 se usan para el nuevo radar TOTW.
@@ -34,6 +49,9 @@ python src/ranking_historico.py
 #    (DEL/MED/DEF) + top 3 por sentimiento (hinchada+medios) y escribe el
 #    borrador en data/tweet_top5.txt (no publica)
 python src/automatizacion.py
+
+# 5. Refrescar la página del radar (lee los CSV y escribe web/data.js)
+python src/landing_data.py
 ```
 
 El pipeline semanal no requiere `API_KEY`: refresca fixtures/TOTW y perfiles
@@ -129,7 +147,8 @@ monotónico y no cambia el orden. La columna aparece en
 | `data/ranking_jugadores_fecha_YYYY-Www.csv` | Ranking semanal nuevo, una fila por jugador, con score y captura de stats |
 | `data/jugadores_fecha_no_resueltos_YYYY-Www.csv` | TOTW sin cruce/estadísticas completas; no se puntúan |
 | `data/ranking_historico_acumulado.csv` | Apariciones en el top 5 agregadas por jugador sobre todos los rankings semanales |
-| `data/sentimiento_radar_YYYY-Www.csv` | Sentimiento por jugador del tweet (YouTube + Olé) con caché semanal |
+| `data/sentimiento_radar_YYYY-Www.csv` | Sentimiento por jugador del tweet (YouTube + prensa) con caché semanal |
+| `web/data.js` | Datos de la página del radar, generados por `src/landing_data.py` |
 | `data/scouting_resultado.csv` | Ranking antiguo de mercado; no lo genera el radar semanal |
 | `data/sentimiento_hinchada.csv` | Comentarios + VADER compound + clasificación |
 | `data/boca_juniors.db` | `candidatos_mercado`, `scouting_resultado`, `adn_boca`, ... |
