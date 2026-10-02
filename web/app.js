@@ -11,18 +11,12 @@
     'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
   var dec1 = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  var pct = new Intl.NumberFormat('es-AR', { style: 'percent', maximumFractionDigits: 0 });
-  var SIN_TILDES = /[\u0300-\u036f]/g;
-
+  
   function el(tag, clase, texto) {
     var nodo = document.createElement(tag);
     if (clase) nodo.className = clase;
     if (texto !== undefined && texto !== null) nodo.textContent = texto;
     return nodo;
-  }
-
-  function sinAcentos(texto) {
-    return String(texto || '').normalize('NFD').replace(SIN_TILDES, '').toLowerCase();
   }
 
   function fecha(iso) {
@@ -121,41 +115,53 @@
   var GRUPOS = {
     DEL: 'delanteros y extremos',
     MED: 'mediocampistas',
-    DEF: 'laterales y centrales'
+    DEF: 'laterales y centrales',
+    SENT: 'reacción de la hinchada y los medios'
   };
 
-  function pintarPuesto(puesto) {
+  function filaPuesto(j, lugar) {
+    var fila = el('div', 'puesto__fila');
+    if (!j) fila.classList.add('puesto__fila--vacia');
+    fila.appendChild(el('span', 'puesto__lugar', lugar));
+
+    var nombre = el('p', 'puesto__nombre');
+    nombre.appendChild(document.createTextNode(j ? j.nombre : 'sin datos de sentimiento'));
+    if (j) nombre.appendChild(el('small', null, j.club));
+    fila.appendChild(nombre);
+
+    fila.appendChild(el('span', 'puesto__ga', j ? j.goles + '+' + j.asistencias : ''));
+
+var sent = el('span', 'puesto__sent');
+    if (!j || j.sentimiento === null || j.sentimiento === undefined) {
+      sent.textContent = '—';
+    } else {
+      if (j.sentimiento > 0) sent.classList.add('puesto__sent--pos');
+      else if (j.sentimiento < 0) sent.classList.add('puesto__sent--neg');
+      sent.textContent = (j.sentimiento > 0 ? '+' : '') + dec1.format(j.sentimiento);
+      var partes = [];
+      if (j.prensa !== null && j.prensa !== undefined) partes.push('prensa ' + dec1.format(j.prensa));
+      if (j.youtube !== null && j.youtube !== undefined) partes.push('YouTube ' + dec1.format(j.youtube));
+      sent.title = partes.join(' · ') + ' · ' + j.n_fuentes + (j.n_fuentes === 1 ? ' fuente' : ' fuentes');
+    }
+    fila.appendChild(sent);
+    return fila;
+  }
+
+  function pintarPuesto(puesto, ancho) {
     var caja = el('div', 'puesto');
+    if (ancho) caja.classList.add('puesto--ancho');
+
     var titulo = el('div', 'puesto__titulo');
     titulo.appendChild(el('b', null, puesto.macro));
     titulo.appendChild(el('span', null, GRUPOS[puesto.macro] || ''));
     caja.appendChild(titulo);
 
-    puesto.jugadores.forEach(function (j, i) {
-      var fila = el('div', 'puesto__fila');
-      fila.appendChild(el('span', 'puesto__lugar', i + 1));
-
-      var nombre = el('p', 'puesto__nombre');
-      nombre.appendChild(document.createTextNode(j.nombre));
-      nombre.appendChild(el('small', null, j.club));
-      fila.appendChild(nombre);
-
-      fila.appendChild(el('span', 'puesto__ga', j.goles + '+' + j.asistencias));
-
-      var sent = el('span', 'puesto__sent');
-      if (j.sentimiento === null) {
-        sent.textContent = '\u2014';
-      } else {
-        if (j.sentimiento > 0) sent.classList.add('puesto__sent--pos');
-        else if (j.sentimiento < 0) sent.classList.add('puesto__sent--neg');
-        sent.textContent = (j.sentimiento > 0 ? '+' : '') + dec1.format(j.sentimiento);
-      }
-      fila.appendChild(sent);
-
-      caja.appendChild(fila);
-    });
-
-    if (!puesto.jugadores.length) {
+    var lista = puesto.jugadores || [];
+    var cups = ancho ? 3 : lista.length;
+    for (var i = 0; i < cups; i++) {
+      caja.appendChild(filaPuesto(lista[i] || null, i + 1));
+    }
+    if (!cups) {
       caja.appendChild(el('p', 'puesto__vacio', 'Sin candidatos de este grupo esa semana.'));
     }
     return caja;
@@ -173,8 +179,12 @@
 
     var puestos = el('div', 'semana__puestos');
     semana.puestos.forEach(function (puesto) {
-      puestos.appendChild(pintarPuesto(puesto));
+      puestos.appendChild(pintarPuesto(puesto, false));
     });
+    puestos.appendChild(pintarPuesto({
+      macro: 'SENT',
+      jugadores: semana.sentimiento
+    }, true));
     bloque.appendChild(puestos);
     return bloque;
   }
@@ -186,144 +196,63 @@
     });
   }
 
-  var ORDEN = {
-    posicion: function (j) { return j.posicion; },
-    nombre: function (j) { return sinAcentos(j.nombre); },
-    liga: function (j) { return sinAcentos(j.liga); },
-    apariciones_top5: function (j) { return j.apariciones_top5; },
-    tasa_top5: function (j) { return j.tasa_top5; },
-    mejor_posicion: function (j) { return j.mejor_posicion; },
-    goles: function (j) { return (j.goles === null ? -1 : j.goles) + (j.asistencias || 0) / 100; },
-    ultima_semana: function (j) { return j.ultima_semana; }
-  };
+  var FUENTES = ['\u2014', 'solo prensa', 'prensa y YouTube'];
+  var TOP_SENTIMIENTO = 5;
 
-  var columna = 'posicion';
-  var sentido = 1;
-  var textoBusqueda = '';
-  var ligaElegida = '';
-  var LIMITE = 25;
-  var mostrarTodos = false;
-
-  function guia(j) {
-    var total = j.semanas_activas_liga;
-    var llenas = Math.min(j.apariciones_top5, total);
-    var medias = Math.max(0, Math.min(j.semanas_en_ranking - j.apariciones_top5, total - llenas));
-    var caja = el('span', 'guia');
-    caja.title = j.apariciones_top5 + ' de ' + j.semanas_en_ranking +
-      ' semanas en el ranking, sobre ' + total + ' con equipo de la fecha en su liga';
-    for (var i = 0; i < total; i++) {
-      var clase = 'celda';
-      if (i < llenas) clase += ' celda--llena';
-      else if (i < llenas + medias) clase += ' celda--ranking';
-      caja.appendChild(el('i', clase));
-    }
+  function barraSentimiento(valor, tope) {
+    var caja = el('span', 'barra-sent');
+    caja.title = 'Escala de -50 a +50; la barra crece desde el cero central';
+    var barra = el('i', valor < 0 ? 'barra-sent__barra--neg' : 'barra-sent__barra--pos');
+    barra.style.width = Math.max(1, Math.round(Math.abs(valor) / tope * 50)) + '%';
+    caja.appendChild(barra);
     return caja;
   }
 
-  function filaHistorico(j) {
-    var tr = el('tr');
-    tr.appendChild(el('td', null, j.posicion));
+  function pintarSentimiento() {
+    var lista = DATOS.sentimiento.acumulado.slice(0, TOP_SENTIMIENTO);
+    var tope = Math.max.apply(null, lista.map(function (j) {
+      return Math.abs(j.sentimiento_medio);
+    }).concat([1]));
 
-    var nombre = el('td');
-    nombre.appendChild(document.createTextNode(j.nombre));
-    nombre.appendChild(el('small', null, j.clubes));
-    tr.appendChild(nombre);
-
-    tr.appendChild(el('td', null, j.liga));
-
-    var celdaGuia = el('td');
-    celdaGuia.appendChild(guia(j));
-    tr.appendChild(celdaGuia);
-
-    tr.appendChild(el('td', null, j.apariciones_top5));
-    tr.appendChild(el('td', null, pct.format(j.tasa_top5)));
-    tr.appendChild(el('td', null, j.mejor_posicion));
-    tr.appendChild(el('td', null, j.goles === null ? '—' : j.goles + '+' + j.asistencias));
-    tr.appendChild(el('td', null, j.ultima_semana));
-    return tr;
-  }
-
-  function pintarHistorico() {
-    var lista = DATOS.historico.filter(function (j) {
-      if (ligaElegida && j.liga !== ligaElegida) return false;
-      if (!textoBusqueda) return true;
-      return sinAcentos(j.nombre + ' ' + j.clubes).indexOf(textoBusqueda) >= 0;
-    });
-
-    lista = lista.slice().sort(function (a, b) {
-      var va = ORDEN[columna](a);
-      var vb = ORDEN[columna](b);
-      if (va < vb) return -sentido;
-      if (va > vb) return sentido;
-      return a.posicion - b.posicion;
-    });
-
-    var cuerpo = document.getElementById('cuerpo-tabla');
+    var cuerpo = document.getElementById('cuerpo-sentimiento');
     cuerpo.textContent = '';
-    lista.slice(0, mostrarTodos ? lista.length : LIMITE)
-      .forEach(function (j) { cuerpo.appendChild(filaHistorico(j)); });
+    lista.forEach(function (j) {
+      var tr = el('tr');
+      tr.appendChild(el('td', null, j.posicion));
 
-    var boton = document.getElementById('ver-todos');
-    boton.hidden = lista.length <= LIMITE || mostrarTodos;
-    boton.textContent = 'Mostrar los ' + lista.length + ' jugadores';
-    boton.onclick = function () {
-      mostrarTodos = true;
-      pintarHistorico();
-    };
+      var nombre = el('td');
+      nombre.appendChild(document.createTextNode(j.nombre));
+      nombre.appendChild(el('small', null, j.club));
+      tr.appendChild(nombre);
 
-    document.getElementById('conteo').textContent = lista.length === DATOS.historico.length
-      ? DATOS.historico.length + ' jugadores en ' + DATOS.semanas.length + ' semanas'
-      : lista.length + ' de ' + DATOS.historico.length + ' jugadores';
-  }
+      var celda = el('td', 'celda-sent');
+      celda.appendChild(barraSentimiento(j.sentimiento_medio, tope));
+      celda.appendChild(el('b', j.sentimiento_medio < 0 ? 'neg' : 'pos',
+        (j.sentimiento_medio > 0 ? '+' : '') + dec1.format(j.sentimiento_medio)));
+      tr.appendChild(celda);
 
-  function conectarOrden() {
-    var ths = document.querySelectorAll('.tabla thead th[data-orden]');
-    Array.prototype.forEach.call(ths, function (th) {
-      var boton = th.querySelector('button');
-      if (!boton || !ORDEN[th.dataset.orden]) return;
-      boton.addEventListener('click', function () {
-        var campo = th.dataset.orden;
-        sentido = columna === campo ? -sentido : (campo === 'nombre' || campo === 'liga' ? 1 : -1);
-        columna = campo;
-        Array.prototype.forEach.call(ths, function (otro) { otro.removeAttribute('aria-sort'); });
-        th.setAttribute('aria-sort', sentido === 1 ? 'ascending' : 'descending');
-        pintarHistorico();
-      });
-    });
-    var primero = document.querySelector('.tabla thead th[data-orden="posicion"]');
-    if (primero) primero.setAttribute('aria-sort', 'ascending');
-  }
-
-  function conectarFiltros() {
-    var ligas = [];
-    DATOS.historico.forEach(function (j) { if (ligas.indexOf(j.liga) < 0) ligas.push(j.liga); });
-    ligas.sort();
-    var select = document.getElementById('filtro-liga');
-    ligas.forEach(function (liga) {
-      var opcion = el('option', null, liga);
-      opcion.value = liga;
-      select.appendChild(opcion);
-    });
-    select.addEventListener('change', function () {
-      ligaElegida = select.value;
-      mostrarTodos = false;
-      pintarHistorico();
-    });
-    var buscar = document.getElementById('buscar');
-    buscar.addEventListener('input', function () {
-      textoBusqueda = sinAcentos(buscar.value.trim());
-      mostrarTodos = false;
-      pintarHistorico();
+      tr.appendChild(el('td', null, j.semanas_medidas));
+      var rango = j.semanas_medidas === 1;
+      tr.appendChild(el('td', null, rango ? '\u2014'
+        : (j.sentimiento_max > 0 ? '+' : '') + dec1.format(j.sentimiento_max)));
+      tr.appendChild(el('td', null, rango ? '\u2014'
+        : (j.sentimiento_min > 0 ? '+' : '') + dec1.format(j.sentimiento_min)));
+      tr.appendChild(el('td', null, FUENTES[j.fuentes] || '\u2014'));
+      cuerpo.appendChild(tr);
     });
   }
 
-  function pintarFeatures() {
-    var lista = document.getElementById('features');
-    DATOS.modelo.features.forEach(function (f) {
-      var esPos = f.indexOf('pos_') === 0;
-      var item = el('li', null, esPos ? f.slice(4).replace(/_/g, ' ').toLowerCase() : f);
-      if (esPos) item.setAttribute('data-tipo', 'posicion');
-      lista.appendChild(item);
+  function cintaSentimiento() {
+    var cinta = document.getElementById('cinta-sentimiento');
+    cinta.textContent = '';
+    var conDos = DATOS.sentimiento.acumulado.filter(function (j) { return j.fuentes === 2; }).length;
+    [
+      ['Jugadores medidos', String(DATOS.sentimiento.jugadores)],
+      ['Mediciones', String(DATOS.sentimiento.mediciones)],
+      ['Con prensa y YouTube', conDos + ' de ' + DATOS.sentimiento.jugadores],
+      ['Escala', '−50 a +50']
+    ].forEach(function (par) {
+      cinta.appendChild(itemCinta(par[0], par[1]));
     });
   }
 
@@ -334,8 +263,7 @@
   pintarSelector();
   pintarRadar();
   pintarPuestos();
-  conectarOrden();
-  conectarFiltros();
-  pintarHistorico();
+  cintaSentimiento();
+  pintarSentimiento();
   pintarFeatures();
 })();

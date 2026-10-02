@@ -22,7 +22,7 @@
     <nav class="nav" aria-label="Secciones">
       <a href="#radar">Radar</a>
       <a href="#puestos">Por puesto</a>
-      <a href="#historico">Histórico</a>
+      <a href="#sentimiento">Sentimiento</a>
       <a href="#metodo">Método</a>
     </nav>
     <p class="bug">
@@ -59,53 +59,39 @@
     </div>
   </section>
 
-  <section class="bloque" id="historico">
+  <section class="bloque" id="sentimiento">
     <div class="grilla">
       <div class="bloque__cabecera">
-        <h2>Histórico del radar</h2>
-        <p>Consolidado por identidad de jugador y no por nombre: cada fila cuenta en cuántas semanas entró al top 5. La guía compara esas apariciones contra las semanas en que su liga tuvo equipo de la fecha, así el volumen de Brasil no infla el ranking.</p>
+        <h2>La reacción de la hinchada</h2>
+        <p>Escala de −50 a +50 sobre lo que dicen de cada jugador los comentarios de YouTube (40%) y la prensa deportiva (60%). Solo entra al cálculo el que tiene dato: sin fuente no es cero, queda sin medir. Ojo con la fecha: el sentimiento se consulta el día que corre el script, no el de la semana del equipo de la fecha, así que mide cómo se los menciona hoy.</p>
       </div>
 
-      <div class="filtros">
-        <label class="campo">
-          <span>Buscar jugador o club</span>
-          <input type="search" id="buscar" autocomplete="off" placeholder="Hulk, Cruzeiro, Lanús">
-        </label>
-        <label class="campo campo--corto">
-          <span>Liga</span>
-          <select id="filtro-liga"><option value="">Todas</option></select>
-        </label>
-        <p class="filtros__conteo" id="conteo" aria-live="polite"></p>
-      </div>
+      <dl class="cinta" id="cinta-sentimiento"></dl>
+
+      <p class="nota-tabla">Top 5 de los 44 jugadores medidos, en el orden del consolidado: primero por pico de reacción y después por media.</p>
 
       <div class="tabla-wrap">
-        <table class="tabla" id="tabla-historico">
-          <caption class="oculto">Histórico de apariciones en el top 5 por jugador</caption>
+        <table class="tabla tabla--sent" id="tabla-sentimiento">
+          <caption class="oculto">Top 5 de reacción de la hinchada</caption>
           <thead>
             <tr>
-              <th scope="col" data-orden="posicion"><button type="button">#</button></th>
-              <th scope="col" data-orden="nombre"><button type="button">Jugador</button></th>
-              <th scope="col" data-orden="liga"><button type="button">Liga</button></th>
-              <th scope="col" data-orden="guia" class="sin-orden"><span>Guía</span></th>
-              <th scope="col" data-orden="apariciones_top5"><button type="button">Top 5</button></th>
-              <th scope="col" data-orden="tasa_top5"><button type="button">Tasa</button></th>
-              <th scope="col" data-orden="mejor_posicion"><button type="button">Mejor</button></th>
-              <th scope="col" data-orden="goles"><button type="button">G+A</button></th>
-              <th scope="col" data-orden="ultima_semana"><button type="button">Última</button></th>
+              <th scope="col">#</th>
+              <th scope="col">Jugador</th>
+              <th scope="col">Reacción media</th>
+              <th scope="col">Semanas</th>
+              <th scope="col">Pico</th>
+              <th scope="col">Piso</th>
+              <th scope="col">Fuentes</th>
             </tr>
           </thead>
-          <tbody id="cuerpo-tabla"></tbody>
+          <tbody id="cuerpo-sentimiento"></tbody>
         </table>
       </div>
 
-      <p class="tabla__pie">
-        <button type="button" id="ver-todos" class="ver-todos" hidden></button>
-      </p>
-
       <ul class="leyenda">
-        <li><i class="celda celda--llena"></i>Entró al top 5 esa semana</li>
-        <li><i class="celda celda--ranking"></i>Estaba en el ranking, fuera del top 5</li>
-        <li><i class="celda"></i>La liga tuvo equipo de la fecha y el jugador no entró al ranking</li>
+        <li><i class="barra-mini barra-mini--pos"></i>Reacción positiva</li>
+        <li><i class="barra-mini barra-mini--neg"></i>Reacción negativa</li>
+        <li>Con una sola medición no hay rango: por eso pico y piso quedan vacíos.</li>
       </ul>
     </div>
   </section>

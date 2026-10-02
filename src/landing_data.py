@@ -6,8 +6,8 @@ pagina se abra con doble click en `file://` sin servidor.
 
 Offline por diseno: no consulta la API ni toca el modelo. Publica el corte por
 puesto que despues usa `automatizacion` para componer el tweet (top 3 de cada
-grupo DEL/MED/DEF), con el sentimiento ya cacheado de esa semana; faltante queda
-como "sin datos", nunca 0.
+grupo DEL/MED/DEF) y el top 3 por sentimiento entre esos nueve; faltante queda
+como None y la pagina reserva el lugar, nunca 0.
 
     python src/landing_data.py
 """
@@ -28,6 +28,7 @@ from posiciones import agrupar_posicion
 from ranking_historico import (PATRON_RANKING, agregar_apariciones, cargar_rankings,
                                resumen_por_liga)
 from rutas import dir_datos, dir_models, dir_raiz
+from sentimiento_radar import top_por_sentimiento
 
 WEB_DIR = os.path.join(dir_raiz(), 'web')
 DATA_JS = os.path.join(WEB_DIR, 'data.js')
@@ -61,13 +62,17 @@ def _rango_semana(clave):
 
 
 def _sentimiento_semana(semana, directorio):
-    """(nombre, club) -> sentimentode la cache semanal; vacio si no se midio."""
+    """(nombre, club) -> registro de la cache semanal; vacio si no se midio."""
     ruta = os.path.join(directorio, f'sentimiento_radar_{semana}.csv')
     if not os.path.exists(ruta):
         return []
     df = pd.read_csv(ruta, encoding='utf-8-sig')
-    return [{'nombre': f['nombre'], 'club': f.get('club'),
-             'sentimiento': _num(f.get('sentimiento'), 1)}
+    return [{'nombre': f['nombre'],
+             'club': f.get('club'),
+             'sentimiento': _num(f.get('sentimiento'), 1),
+             'n_fuentes': _int(f.get('n_fuentes')) or 0,
+             'youtube': _num(f.get('youtube_valor'), 1),
+             'prensa': _num(f.get('prensa_valor'), 1)}
             for f in df.to_dict('records')]
 
 
@@ -110,9 +115,30 @@ def _puestos(df, registros):
                     'goles': _int(fila.goles),
                     'asistencias': _int(fila.asistencias),
                     'sentimiento': _num(found['sentimiento'], 1) if found else None,
+                    'n_fuentes': found['n_fuentes'] if found else 0,
+                    'youtube': found['youtube'] if found else None,
+                    'prensa': found['prensa'] if found else None,
                 })
         salida.append({'macro': macro, 'jugadores': jugadores})
     return salida
+
+
+def _top_sentimiento(puestos):
+    """Top 3 por sentimiento entre los candidatos del corte por puesto.
+
+    Mismo criterio que la linea SENT del tweet: solo los que tienen dato
+    cacheado, ordenados de mayor a menor. Sin cache la lista queda vacia.
+    """
+    registros = [{'nombre': j['nombre'], 'club': j['club'], 'sentimiento': j['sentimiento'],
+                  'goles': j['goles'], 'asistencias': j['asistencias'],
+                  'n_fuentes': j['n_fuentes'], 'youtube': j['youtube'],
+                  'prensa': j['prensa']}
+                 for p in puestos for j in p['jugadores']]
+    return [{'nombre': r['nombre'], 'club': r['club'],
+             'goles': r['goles'], 'asistencias': r['asistencias'],
+             'sentimiento': _num(r['sentimiento'], 1),
+             'n_fuentes': r['n_fuentes'], 'youtube': r['youtube'], 'prensa': r['prensa']}
+            for r in top_por_sentimiento(registros, 3)]
 
 
 def construir_semanas(directorio):
@@ -138,6 +164,7 @@ def construir_semanas(directorio):
             'ligas': sorted(df['liga'].dropna().unique().tolist()),
             'top': [_jugador(f, n) for n, f in enumerate(df.head(TOP_PLANILLA).to_dict('records'), 1)],
             'puestos': puestos,
+            'sentimiento': _top_sentimiento(puestos),
             'medidos': sum(1 for p in puestos for j in p['jugadores']
                            if j['sentimiento'] is not None),
             'seleccionados': sum(len(p['jugadores']) for p in puestos),
@@ -193,17 +220,76 @@ def construir_modelo():
     }
 
 
+def construir_sentimiento(directorio):
+    """Historial de sentimiento que deja `sentimiento_historico.py`.
+
+    Solo lee los CSV que ese script ya escribio (no recalcula ni consulta la
+    API): el detalle por jugador-semana y el consolidado por jugador. El
+    breakdown de fuentes se arma del detalle porque el acumulado no lo guarda.
+    """
+    detalle = []
+    ruta = os.path.join(directorio, 'sentimiento_historico.csv')
+    if os.path.exists(ruta):
+        df = pd.read_csv(ruta, encoding='utf-8-sig')
+        for f in df.to_dict('records'):
+            detalle.append({
+                'semana': f['semana'],
+                'puesto': f['puesto'],
+                'nombre': f['nombre'],
+                'club': f.get('club'),
+                'sentimiento': _num(f.get('sentimiento'), 1),
+                'n_fuentes': _int(f.get('n_fuentes')) or 0,
+                'youtube': _num(f.get('youtube_valor'), 1),
+                'prensa': _num(f.get('prensa_valor'), 1),
+            })
+
+    fuentes = {}
+    for f in detalle:
+        vistas = fuentes.setdefault(f['nombre'], set())
+        if f['prensa'] is not None:
+            vistas.add('prensa')
+        if f['youtube'] is not None:
+            vistas.add('youtube')
+
+    acumulado = []
+    ruta = os.path.join(directorio, 'sentimiento_historico_acumulado.csv')
+    if os.path.exists(ruta):
+        df = pd.read_csv(ruta, encoding='utf-8-sig')
+        for f in df.to_dict('records'):
+            vistas = fuentes.get(f['nombre'], set())
+            acumulado.append({
+                'posicion': len(acumulado) + 1,
+                'nombre': f['nombre'],
+                'club': f.get('club'),
+                'semanas_medidas': _int(f['semanas_medidas']),
+                'sentimiento_medio': _num(f['sentimiento_medio'], 2),
+                'sentimiento_max': _num(f['sentimiento_max'], 1),
+                'sentimiento_min': _num(f['sentimiento_min'], 1),
+                'primera_semana': f['primera_semana'],
+                'ultima_semana': f['ultima_semana'],
+                'fuentes': len(vistas),
+            })
+    return detalle, acumulado
+
+
 def construir_datos(directorio=None, modelos=None):
     directorio = directorio or dir_datos()
     modelos = modelos or dir_models()
     semanas = construir_semanas(directorio)
     historico, por_liga = construir_historico(directorio)
+    detalle, sentimiento = construir_sentimiento(directorio)
     return {
         'generado': date.today().isoformat(),
         'modelo': construir_modelo(),
         'semanas': list(reversed(semanas)),
         'historico': historico,
         'por_liga': por_liga,
+        'sentimiento': {
+            'mediciones': len(detalle),
+            'jugadores': len(sentimiento),
+            'acumulado': sentimiento,
+            'detalle': detalle,
+        },
     }
 
 
@@ -223,6 +309,8 @@ def main():
     print(f"  semanas: {len(datos['semanas'])} "
           f"[{datos['semanas'][-1]['clave']}..{datos['semanas'][0]['clave']}]")
     print(f"  historico: {len(datos['historico'])} jugadores")
+    print(f"  sentimiento: {datos['sentimiento']['mediciones']} mediciones, "
+          f"{datos['sentimiento']['jugadores']} jugadores")
     return datos
 
 

@@ -8,6 +8,7 @@ from landing_data import (
     construir_datos,
     construir_historico,
     construir_semanas,
+    construir_sentimiento,
     escribir_js,
 )
 
@@ -78,6 +79,7 @@ def test_puestos_sin_cache_dejan_el_sentimiento_en_none(semanas_tmp):
     semana = construir_semanas(semanas_tmp)[0]
     assert semana['medidos'] == 0
     assert semana['seleccionados'] == 2
+    assert semana['sentimiento'] == []
     assert all(j['sentimiento'] is None
                for p in semana['puestos'] for j in p['jugadores'])
 
@@ -85,15 +87,26 @@ def test_puestos_sin_cache_dejan_el_sentimiento_en_none(semanas_tmp):
 def test_sentimiento_cacheado_se_une_al_jugador(tmp_path):
     escribir(tmp_path, 2026, 41, [
         fila(1, 'Uno', 'Peru', 'Alianza', 'Centre-Forward', 1, 0.9, 0.8, 5, 1),
+        fila(2, 'Dos', 'Peru', 'Sporting', 'Central Midfield', 2, 0.8, 0.7, 2, 4),
     ])
     pd.DataFrame([
-        {'nombre': 'Uno', 'club': 'Alianza', 'sentimiento': 4.2, 'n_fuentes': 2,
-         'fuentes': 'prensa,youtube', 'youtube_valor': 3.0, 'prensa_valor': 5.0},
+        {'nombre': 'Uno', 'club': 'Alianza', 'sentimiento': 1.5, 'n_fuentes': 2,
+         'fuentes': 'prensa,youtube', 'youtube_valor': 3.0, 'prensa_valor': 0.0},
+        {'nombre': 'Dos', 'club': 'Sporting', 'sentimiento': 4.2, 'n_fuentes': 1,
+         'fuentes': 'prensa', 'youtube_valor': None, 'prensa_valor': 4.2},
     ]).to_csv(tmp_path / 'sentimiento_radar_2026-W41.csv', index=False, encoding='utf-8-sig')
 
     semana = construir_semanas(tmp_path)[0]
-    assert semana['medidos'] == 1
-    assert semana['puestos'][0]['jugadores'][0]['sentimiento'] == 4.2
+    assert semana['medidos'] == 2
+    por_puesto = {p['macro']: {j['nombre']: j['sentimiento'] for j in p['jugadores']}
+                  for p in semana['puestos']}
+    assert por_puesto['DEL'] == {'Uno': 1.5}
+    assert por_puesto['MED'] == {'Dos': 4.2}
+
+    top = semana['sentimiento']
+    assert [j['nombre'] for j in top] == ['Dos', 'Uno']
+    assert [j['sentimiento'] for j in top] == [4.2, 1.5]
+    assert top[0]['goles'] == 2 and top[0]['asistencias'] == 4
 
 
 def test_historico_consolida_por_identidad(semanas_tmp):
@@ -108,6 +121,49 @@ def test_historico_consolida_por_identidad(semanas_tmp):
 
 def test_historico_vacio_sin_rankings(tmp_path):
     assert construir_historico(tmp_path) == ([], [])
+
+
+def escribir_sentimiento(directorio, detalle, acumulado):
+    pd.DataFrame(detalle).to_csv(directorio / 'sentimiento_historico.csv',
+                                 index=False, encoding='utf-8-sig')
+    pd.DataFrame(acumulado).to_csv(directorio / 'sentimiento_historico_acumulado.csv',
+                                   index=False, encoding='utf-8-sig')
+
+
+def test_construir_sentimiento_agrega_fuentes_desde_el_detalle(tmp_path):
+    escribir_sentimiento(
+        tmp_path,
+        [
+            {'semana': '2026-W34', 'puesto': 'DEL', 'nombre': 'Uno', 'club': 'A',
+             'sentimiento': 4.0, 'n_fuentes': 2, 'fuentes': 'prensa,youtube',
+             'youtube_valor': 3.0, 'prensa_valor': 5.0},
+            {'semana': '2026-W35', 'puesto': 'DEL', 'nombre': 'Uno', 'club': 'A',
+             'sentimiento': 2.0, 'n_fuentes': 2, 'fuentes': 'prensa,youtube',
+             'youtube_valor': 1.0, 'prensa_valor': 3.0},
+            {'semana': '2026-W34', 'puesto': 'MED', 'nombre': 'Dos', 'club': 'B',
+             'sentimiento': None, 'n_fuentes': 1, 'fuentes': 'prensa',
+             'youtube_valor': None, 'prensa_valor': -1.0},
+        ],
+        [
+            {'nombre': 'Uno', 'club': 'A', 'semanas_medidas': 2, 'sentimiento_medio': 3.0,
+             'sentimiento_max': 4.0, 'sentimiento_min': 2.0,
+             'primera_semana': '2026-W34', 'ultima_semana': '2026-W35'},
+            {'nombre': 'Dos', 'club': 'B', 'semanas_medidas': 1, 'sentimiento_medio': -1.0,
+             'sentimiento_max': -1.0, 'sentimiento_min': -1.0,
+             'primera_semana': '2026-W34', 'ultima_semana': '2026-W34'},
+        ])
+
+    detalle, acumulado = construir_sentimiento(tmp_path)
+    assert len(detalle) == 3
+    assert detalle[0]['youtube'] == 3.0
+    assert detalle[2]['sentimiento'] is None
+    assert [j['nombre'] for j in acumulado] == ['Uno', 'Dos']
+    assert [j['posicion'] for j in acumulado] == [1, 2]
+    assert [j['fuentes'] for j in acumulado] == [2, 1]
+
+
+def test_construir_sentimiento_sin_csv_queda_vacio(tmp_path):
+    assert construir_sentimiento(tmp_path) == ([], [])
 
 
 def test_escribir_js_produce_json_serializable(tmp_path, semanas_tmp):
@@ -134,3 +190,5 @@ def test_web_data_js_esta_actualizado():
     assert payload['semanas']
     assert payload['historico']
     assert payload['modelo']['penalty'] == 'l1'
+    assert 'acumulado' in payload['sentimiento']
+    assert 'detalle' in payload['sentimiento']
