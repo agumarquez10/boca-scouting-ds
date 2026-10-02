@@ -33,13 +33,17 @@ def _cliente():
 
 
 def buscar_videos(youtube, nombre, club=''):
+    """Busca videos del jugador. Devuelve [] si falla (cuota agotada o red)."""
     query = f'{nombre} Boca'
     if club:
         query = f'{nombre} {club} Boca'
-    resultado = youtube.search().list(
-        q=query, part='id,snippet', type='video',
-        maxResults=MAX_VIDEOS_POR_JUGADOR, relevanceLanguage='es',
-    ).execute()
+    try:
+        resultado = youtube.search().list(
+            q=query, part='id,snippet', type='video',
+            maxResults=MAX_VIDEOS_POR_JUGADOR, relevanceLanguage='es',
+        ).execute()
+    except Exception:
+        return []
     return [item['id']['videoId'] for item in resultado.get('items', [])
             if item.get('id', {}).get('videoId')]
 
@@ -68,7 +72,11 @@ def sentimiento_jugador_youtube(nombre, club='', engine=None):
     if not YOUTUBE_API_KEY:
         return {'ok': False, 'error': 'Sin API key', 'valor': 0.0, 'n_comentarios': 0}
     engine = engine or SentimientoEngine()
-    youtube = _cliente()
+    try:
+        youtube = _cliente()
+    except Exception as exc:
+        return {'ok': False, 'error': f'cliente: {type(exc).__name__}',
+                'valor': 0.0, 'n_comentarios': 0}
     videos = buscar_videos(youtube, nombre, club)
     textos = []
     for vid in videos:

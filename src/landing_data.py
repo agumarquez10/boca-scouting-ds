@@ -4,10 +4,10 @@ Toma los rankings semanales, el sentimiento ya cacheado y el ranking historico
 acumulado y los vuelca como un objeto global (`window.RADAR_DATA`) para que la
 pagina se abra con doble click en `file://` sin servidor.
 
-Offline por diseno: no consulta la API ni toca el modelo. Los borradores de
-tweet se recomponen con `automatizacion.componer_tweet` sobre los CSV ya
-guardados, usando solo el sentimiento cacheado de esa semana (faltante queda
-como "sin datos", nunca 0).
+Offline por diseno: no consulta la API ni toca el modelo. Publica el corte por
+puesto que despues usa `automatizacion` para componer el tweet (top 3 de cada
+grupo DEL/MED/DEF), con el sentimiento ya cacheado de esa semana; faltante queda
+como "sin datos", nunca 0.
 
     python src/landing_data.py
 """
@@ -23,12 +23,11 @@ import pandas as pd
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 
-from automatizacion import _macro_posicion, componer_tweet, seleccionar_por_puesto
+from automatizacion import ORDEN_PUESTOS, _macro_posicion, seleccionar_por_puesto
 from posiciones import agrupar_posicion
 from ranking_historico import (PATRON_RANKING, agregar_apariciones, cargar_rankings,
                                resumen_por_liga)
 from rutas import dir_datos, dir_models, dir_raiz
-from sentimiento_radar import top_por_sentimiento
 
 WEB_DIR = os.path.join(dir_raiz(), 'web')
 DATA_JS = os.path.join(WEB_DIR, 'data.js')
@@ -62,24 +61,14 @@ def _rango_semana(clave):
 
 
 def _sentimiento_semana(semana, directorio):
-    """Registros cacheados de la semana; lista vacia si no se midio esa semana."""
+    """(nombre, club) -> sentimentode la cache semanal; vacio si no se midio."""
     ruta = os.path.join(directorio, f'sentimiento_radar_{semana}.csv')
     if not os.path.exists(ruta):
         return []
     df = pd.read_csv(ruta, encoding='utf-8-sig')
-    registros = []
-    for f in df.to_dict('records'):
-        valor = f.get('sentimiento')
-        registros.append({
-            'nombre': f['nombre'],
-            'club': f.get('club'),
-            'sentimiento': _num(valor, 1),
-            'n_fuentes': _int(f.get('n_fuentes')) or 0,
-            'fuentes': f.get('fuentes') if isinstance(f.get('fuentes'), str) else '',
-            'youtube_valor': _num(f.get('youtube_valor'), 1),
-            'prensa_valor': _num(f.get('prensa_valor'), 1),
-        })
-    return registros
+    return [{'nombre': f['nombre'], 'club': f.get('club'),
+             'sentimiento': _num(f.get('sentimiento'), 1)}
+            for f in df.to_dict('records')]
 
 
 def _jugador(fila, lugar=None):
@@ -98,8 +87,36 @@ def _jugador(fila, lugar=None):
     }
 
 
+def _puestos(df, registros):
+    """Top 3 de cada grupo de puesto con el sentimiento cacheado de la semana.
+
+    Es el corte que despues usa `automatizacion` para componer el tweet: los
+    grupos siempre en orden DEL/MED/DEF, con lo que haya cacheado de esa semana.
+    Un grupo sin candidatos se devuelve vacio, no se omite.
+    """
+    cache = {(r['nombre'], r['club']): r for r in registros}
+    seleccion = seleccionar_por_puesto(df)
+    salida = []
+    for macro in ORDEN_PUESTOS:
+        grupo = seleccion.get(macro)
+        jugadores = []
+        if grupo is not None and not grupo.empty:
+            for fila in grupo.itertuples():
+                found = cache.get((fila.nombre, fila.club))
+                jugadores.append({
+                    'nombre': fila.nombre,
+                    'club': fila.club,
+                    'liga': fila.liga,
+                    'goles': _int(fila.goles),
+                    'asistencias': _int(fila.asistencias),
+                    'sentimiento': _num(found['sentimiento'], 1) if found else None,
+                })
+        salida.append({'macro': macro, 'jugadores': jugadores})
+    return salida
+
+
 def construir_semanas(directorio):
-    """Una entrada por semana ISO con la planilla del top 5 y su borrador de tweet."""
+    """Una entrada por semana ISO con la planilla del top 5 y el corte por puesto."""
     archivos = sorted(n for n in os.listdir(directorio) if PATRON_RANKING.match(n))
     semanas = []
     for nombre in archivos:
@@ -111,17 +128,7 @@ def construir_semanas(directorio):
         df = df.sort_values('score_adn_boca', ascending=False)
         df = df.drop_duplicates(subset=['player_id_fotmob'], keep='first')
 
-        seleccionados = seleccionar_por_puesto(df)
-        del_tweet = [f for grupo in seleccionados.values()
-                     for f in grupo.to_dict('records')]
-        registros = _sentimiento_semana(clave, directorio)
-        indice_sent = {(r['nombre'], r['club']): r for r in registros}
-        sentiment_tweet = []
-        for f in del_tweet:
-            found = indice_sent.get((f['nombre'], f['club']))
-            if found:
-                sentiment_tweet.append(found)
-
+        puestos = _puestos(df, _sentimiento_semana(clave, directorio))
         inicio, fin = _rango_semana(clave)
         semanas.append({
             'clave': clave,
@@ -130,13 +137,10 @@ def construir_semanas(directorio):
             'jugadores': len(df),
             'ligas': sorted(df['liga'].dropna().unique().tolist()),
             'top': [_jugador(f, n) for n, f in enumerate(df.head(TOP_PLANILLA).to_dict('records'), 1)],
-            'tweet': {
-                'texto': componer_tweet(seleccionados,
-                                        top_por_sentimiento(sentiment_tweet, 3)),
-                'medidos': len(sentiment_tweet),
-                'seleccionados': len(del_tweet),
-                'sentimiento': sentiment_tweet,
-            },
+            'puestos': puestos,
+            'medidos': sum(1 for p in puestos for j in p['jugadores']
+                           if j['sentimiento'] is not None),
+            'seleccionados': sum(len(p['jugadores']) for p in puestos),
         })
     return semanas
 

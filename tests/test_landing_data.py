@@ -63,15 +63,26 @@ def test_planilla_ordena_por_score_y_no_por_ranking(semanas_tmp):
     assert semana['top'][0]['puesto'] == 'DEL'
 
 
-def test_borrador_usa_el_compositor_y_omite_sentimiento_sin_cache(semanas_tmp):
+def test_puestos_traen_los_tres_grupos_aunque_no_hayan_candidatos(semanas_tmp):
     semana = construir_semanas(semanas_tmp)[0]
-    assert semana['tweet']['texto'].startswith('ADN Boca - Top por puesto (G+A)')
-    assert 'DEL: Bruno Vega (Talleres) 9+2' in semana['tweet']['texto']
-    assert semana['tweet']['medidos'] == 0
-    assert 'SENT' not in semana['tweet']['texto']
+    macros = [p['macro'] for p in semana['puestos']]
+    assert macros == ['DEL', 'MED', 'DEF']
+
+    del_ = semana['puestos'][0]
+    assert [j['nombre'] for j in del_['jugadores']] == ['Bruno Vega', 'Ronaldo Martinez']
+    assert del_['jugadores'][0]['goles'] == 9
+    assert semana['puestos'][1]['jugadores'] == []
 
 
-def test_sentimiento_cacheado_entra_al_borrador(tmp_path):
+def test_puestos_sin_cache_dejan_el_sentimiento_en_none(semanas_tmp):
+    semana = construir_semanas(semanas_tmp)[0]
+    assert semana['medidos'] == 0
+    assert semana['seleccionados'] == 2
+    assert all(j['sentimiento'] is None
+               for p in semana['puestos'] for j in p['jugadores'])
+
+
+def test_sentimiento_cacheado_se_une_al_jugador(tmp_path):
     escribir(tmp_path, 2026, 41, [
         fila(1, 'Uno', 'Peru', 'Alianza', 'Centre-Forward', 1, 0.9, 0.8, 5, 1),
     ])
@@ -81,9 +92,8 @@ def test_sentimiento_cacheado_entra_al_borrador(tmp_path):
     ]).to_csv(tmp_path / 'sentimiento_radar_2026-W41.csv', index=False, encoding='utf-8-sig')
 
     semana = construir_semanas(tmp_path)[0]
-    assert semana['tweet']['medidos'] == 1
-    assert semana['tweet']['sentimiento'][0]['sentimiento'] == 4.2
-    assert 'SENT (hinchada+medios): Uno (Alianza) +4.2' in semana['tweet']['texto']
+    assert semana['medidos'] == 1
+    assert semana['puestos'][0]['jugadores'][0]['sentimiento'] == 4.2
 
 
 def test_historico_consolida_por_identidad(semanas_tmp):

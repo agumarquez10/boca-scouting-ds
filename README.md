@@ -10,8 +10,8 @@ ADN Boca; el siguiente objetivo es sumar sentimiento real y publicar el top 5.
 FotMob Team of the Week + fixtures ─┐
 FotMob playerStats (todos los torneos de club)├─► scouting_pipeline.py ─► ranking_jugadores_fecha_YYYY-Www.csv
 modelo L1 + scaler + encoder ─────────┘                                  │
-                                                                          ├─► automatizacion.py ─► tweet_top5.txt (borrador)
-                                                                          └─► sentimiento real por jugador (pendiente)
+                                                                           └─► corrida_semanal.py ─┬─► sentiment_radar.py ─► tweet_top5.txt (borrador)
+                                                        (gate de 3 ligas)    └─► landing_data.py ─► web/data.js
 ```
 
 ## Página del radar (`web/`)
@@ -23,10 +23,15 @@ API ni recalcula el modelo. La página (`web/index.html` + `styles.css` + `app.j
 es estática y se abre con doble click, sin servidor ni build.
 
 Muestra la planilla de la semana (top 5 ordenados por el score del modelo, con
-selector de semana), los borradores semanales y el histórico con búsqueda,
-filtro por liga y orden por columna. A pedido del usuario la página **no
-muestra el score ni la probabilidad calibrada**: el orden viene del modelo pero
-el número no se publica, y `data.js` ni siquiera lo exporta. Los borradores se recomponen con `automatizacion.componer_tweet` sobre
+selector de semana), el corte por puesto y el histórico con búsqueda, filtro por
+liga y orden por columna. A pedido del usuario la página **no muestra el score ni
+la probabilidad calibrada**: el orden viene del modelo pero el número no se
+publica, y `data.js` ni siquiera lo exporta.
+
+El corte por puesto son los tres grupos DEL/MED/DEF con sus tres candidatos, el
+mismo `seleccionar_por_puesto` que usa `automatizacion` para componer el tweet:
+la página muestra los nueve nombres con club y G+A, y el sentimiento si está
+cacheado para esa semana, pero no el texto del tweet. Los borradores se recomponen con `automatizacion.componer_tweet` sobre
 los rankings guardados: solo el sentimiento que está cacheado para esa semana
 (`sentimiento_radar_YYYY-Www.csv`) entra al texto, y lo que falta se muestra como
 "sin sentimiento medido".
@@ -179,19 +184,42 @@ VADER está entrenado en inglés; se aplica un lexicón mínimo español-futbole
 en `src/sentimiento_hinchada.ipynb`. Mejorar con un modelo de español cuando
 haya datos reales.
 
-## Automatización semanal (Windows Task Scheduler)
+## Corrida semanal (`src/corrida_semanal.py`)
 
-Crear una tarea que ejecute `src/automatizacion.py` (probablemente con
-`python.exe` de Anaconda base) cada lunes. El script corre el radar semanal,
-arma un top 3 de delanteros, mediocampistas y defensores (con club y
-goles+asistencias, para dar variedad de puestos) más un top 3 por sentimiento
-(YouTube + prensa multi-medio AR/PE/CL/PY y ESPN/Marca/AS vía Google News RSS,
-con prioridad a los medios) sobre esos 9 jugadores, y deja el borrador en
-`data/tweet_top5.txt`; no publica en Twitter (esa integración está pendiente):
+Punto de entrada de la semana. Encadena radar TOTW → gate → ranking → sentimiento →
+borrador de tweet → refresh de la landing, y aplica un **gate de cobertura**: solo
+genera la salida si al menos **3 ligas** publicaron TOTW de verdad en la semana.
+
+Que una liga tenga fixtures en el semana no cuenta: si el TOTW todavía no está
+publicado (FotMob publica la fecha con días de atraso) la liga se cuenta como
+`sin TOTW`. Si el gate no se cumple **no se escribe nada** (ni ranking, ni tweet, ni
+`web/data.js`): la corrida anterior queda intacta y el siguiente intento reevalúa la
+misma semana, así que conviene correrlo más de una vez por semana.
 
 ```powershell
-schtasks /Create /SC WEEKLY /D MON /ST 09:00 /TN "BocaScouting" /TR "C:\Users\Agu\Desktop\boca-scouting-ds\venv\Scripts\python.exe C:\Users\Agu\Desktop\boca-scouting-ds\src\automatizacion.py"
+python src/corrida_semanal.py                    # corrida normal
+python src/corrida_semanal.py --min-ligas 4       # gate más exigente
+python src/corrida_semanal.py --forzar            # ignora el gate
+python src/corrida_semanal.py --sin-sentimiento   # solo ranking, no consume cuota de YouTube
 ```
+
+Códigos de salida: `0` corrida completa · `2` no se produjo salida (gate no cumplido o
+sin jugadores puntuables) · `1` error inesperado. Log rotativo en
+`outputs/logs/corrida_semanal.log`.
+
+## Automatización semanal (Windows Task Scheduler)
+
+No hay tarea creada: se corre a mano con el comando de arriba. Si más adelante se
+quiere programar, se apunta el Programador de tareas a `src/corrida_semanal.py`
+conviene con **varios intentos por semana** (p. ej. martes, jueves y sábado) para
+absorber la latencia de publicación de FotMob:
+
+```powershell
+schtasks /Create /SC WEEKLY /D TUE,THU,SAT /ST 08:00 /TN "BocaScouting" /TR "C:\Users\Agu\Desktop\boca-scouting-ds\venv\Scripts\python.exe C:\Users\Agu\Desktop\boca-scouting-ds\src\corrida_semanal.py"
+```
+
+El borrador queda en `data/tweet_top5.txt` y la página se regenera; no publica en
+Twitter (esa integración está pendiente).
 
 ## Tests
 

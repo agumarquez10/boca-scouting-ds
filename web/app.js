@@ -3,7 +3,7 @@
 
   var DATOS = window.RADAR_DATA;
   if (!DATOS) {
-    document.body.innerHTML = '<p class="vacio">Falta <code>web/data.js</code>. Corré <code>python src/landing_data.py</code>.</p>';
+    document.body.innerHTML = '<p class="vacio">Falta <code>web/data.js</code>. Corre <code>python src/landing_data.py</code>.</p>';
     return;
   }
 
@@ -116,87 +116,73 @@
     }
   }
 
-  function copiar(texto) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(texto);
-    }
-    return new Promise(function (resolver) {
-      var area = document.createElement('textarea');
-      area.value = texto;
-      area.setAttribute('readonly', '');
-      area.style.position = 'fixed';
-      area.style.opacity = '0';
-      document.body.appendChild(area);
-      area.select();
-      document.execCommand('copy');
-      document.body.removeChild(area);
-      resolver();
-    });
-  }
+/* ---------------- corte por puesto ---------------- */
 
-  function pintarTweet(semana) {
-    var tarjeta = el('article', 'tweet');
+  var GRUPOS = {
+    DEL: 'delanteros y extremos',
+    MED: 'mediocampistas',
+    DEF: 'laterales y centrales'
+  };
 
-    var cabecera = el('div', 'tweet__cabecera');
-    cabecera.appendChild(el('span', 'tweet__semana', semana.clave));
-    cabecera.appendChild(el('span', 'tweet__estado', semana.tweet.medidos
-      ? 'borrador · ' + semana.tweet.medidos + ' de ' + semana.tweet.seleccionados + ' con sentimiento'
-      : 'borrador · sin sentimiento medido'));
-    tarjeta.appendChild(cabecera);
+  function pintarPuesto(puesto) {
+    var caja = el('div', 'puesto');
+    var titulo = el('div', 'puesto__titulo');
+    titulo.appendChild(el('b', null, puesto.macro));
+    titulo.appendChild(el('span', null, GRUPOS[puesto.macro] || ''));
+    caja.appendChild(titulo);
 
-    var original = semana.tweet.texto;
-    var texto = el('pre', 'tweet__texto');
-    original.split('\n').forEach(function (linea, i) {
-      if (i) texto.appendChild(document.createTextNode('\n'));
-      var corte = linea.match(/^(DEL|MED|DEF|SENT[^:]*): /);
-      if (corte) {
-        texto.appendChild(el('b', null, corte[0]));
-        texto.appendChild(document.createTextNode(linea.slice(corte[0].length)));
+    puesto.jugadores.forEach(function (j, i) {
+      var fila = el('div', 'puesto__fila');
+      fila.appendChild(el('span', 'puesto__lugar', i + 1));
+
+      var nombre = el('p', 'puesto__nombre');
+      nombre.appendChild(document.createTextNode(j.nombre));
+      nombre.appendChild(el('small', null, j.club));
+      fila.appendChild(nombre);
+
+      fila.appendChild(el('span', 'puesto__ga', j.goles + '+' + j.asistencias));
+
+      var sent = el('span', 'puesto__sent');
+      if (j.sentimiento === null) {
+        sent.textContent = '\u2014';
       } else {
-        texto.appendChild(document.createTextNode(linea));
+        if (j.sentimiento > 0) sent.classList.add('puesto__sent--pos');
+        else if (j.sentimiento < 0) sent.classList.add('puesto__sent--neg');
+        sent.textContent = (j.sentimiento > 0 ? '+' : '') + dec1.format(j.sentimiento);
       }
-    });
-    tarjeta.appendChild(texto);
+      fila.appendChild(sent);
 
-    if (semana.tweet.sentimiento.length) {
-      var chips = el('div', 'tweet__sent');
-      semana.tweet.sentimiento.forEach(function (s) {
-        var chip = el('span', 'chip');
-        chip.appendChild(el('b', null, s.nombre));
-        if (s.sentimiento === null) {
-          chip.classList.add('chip--nulo');
-          chip.appendChild(el('i', null, 'sin datos'));
-        } else {
-          if (s.sentimiento > 0) chip.classList.add('chip--pos');
-          else if (s.sentimiento < 0) chip.classList.add('chip--neg');
-          chip.appendChild(el('i', null, (s.sentimiento > 0 ? '+' : '') + dec1.format(s.sentimiento)));
-        }
-        chips.appendChild(chip);
-      });
-      tarjeta.appendChild(chips);
+      caja.appendChild(fila);
+    });
+
+    if (!puesto.jugadores.length) {
+      caja.appendChild(el('p', 'puesto__vacio', 'Sin candidatos de este grupo esa semana.'));
     }
-
-    var boton = el('button', 'copiar', 'Copiar el texto');
-    boton.type = 'button';
-    boton.addEventListener('click', function () {
-      copiar(original).then(function () {
-        boton.textContent = 'Copiado';
-        boton.setAttribute('data-estado', 'hecho');
-        window.setTimeout(function () {
-          boton.textContent = 'Copiar el texto';
-          boton.removeAttribute('data-estado');
-        }, 2200);
-      });
-    });
-    tarjeta.appendChild(boton);
-
-    return tarjeta;
+    return caja;
   }
 
-  function pintarTweets() {
-    var lista = document.getElementById('lista-tweets');
+  function pintarSemanaPuestos(semana) {
+    var bloque = el('article', 'semana');
+    var cabecera = el('div', 'semana__cabecera');
+    cabecera.appendChild(el('h3', null, semana.clave));
+    cabecera.appendChild(el('span', 'semana__rango', rangoSemana(semana)));
+    cabecera.appendChild(el('span', 'semana__estado', semana.medidos
+      ? semana.medidos + ' de ' + semana.seleccionados + ' con sentimiento'
+      : 'sin sentimiento medido'));
+    bloque.appendChild(cabecera);
+
+    var puestos = el('div', 'semana__puestos');
+    semana.puestos.forEach(function (puesto) {
+      puestos.appendChild(pintarPuesto(puesto));
+    });
+    bloque.appendChild(puestos);
+    return bloque;
+  }
+
+  function pintarPuestos() {
+    var lista = document.getElementById('lista-puestos');
     semanas.forEach(function (semana) {
-      lista.appendChild(pintarTweet(semana));
+      lista.appendChild(pintarSemanaPuestos(semana));
     });
   }
 
@@ -347,7 +333,7 @@
 
   pintarSelector();
   pintarRadar();
-  pintarTweets();
+  pintarPuestos();
   conectarOrden();
   conectarFiltros();
   pintarHistorico();

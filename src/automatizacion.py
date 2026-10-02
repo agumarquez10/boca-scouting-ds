@@ -144,30 +144,51 @@ def _semana_actual():
     return f'{iso.year}-W{iso.week:02d}'
 
 
+def generar_borrador(ranking, semana=None, cache_path=None):
+    """Top 3 por puesto + sentimiento + texto del tweet, sobre un ranking ya calculado.
+
+    Separate de `main()` para que quien ya consulto FotMob (por ejemplo el gate
+    semanal) no vuelva a pegarle a la API. `cache_path` permite elegir el archivo
+    de cache; por defecto es el de la semana cerrada actual.
+    """
+    seleccion = seleccionar_por_puesto(ranking)
+    jugadores = _jugadores_del_tweet(seleccion)
+    semana = semana or _semana_actual()
+    cache_path = cache_path or os.path.join(DATA_DIR, f'sentimiento_radar_{semana}.csv')
+
+    registros = calcular_sentimiento(jugadores, cache_path=cache_path)
+    sentimiento = top_por_sentimiento(registros, 3)
+    con_datos = sum(1 for r in registros if r.get('sentimiento') is not None)
+
+    texto = componer_tweet(seleccion, sentimiento)
+    with open(TWEET_TXT, 'w', encoding='utf-8') as f:
+        f.write(texto + '\n')
+    return {
+        'texto': texto,
+        'registros': registros,
+        'sentimiento': sentimiento,
+        'con_datos': con_datos,
+        'jugadores': jugadores,
+        'cache_path': cache_path,
+    }
+
+
 def main():
     print('== Paso 1: radar semanal TOTW ==')
     ranking = correr_scouting()
     if ranking is None or ranking.empty:
         print('[aviso] Sin jugadores puntuables: no se genera borrador de tweet.')
         return None
-    seleccion = seleccionar_por_puesto(ranking)
 
     print('\n== Paso 2: sentimiento (hinchada + medios) ==')
-    semana = _semana_actual()
-    cache_path = os.path.join(DATA_DIR, f'sentimiento_radar_{semana}.csv')
-    jugadores = _jugadores_del_tweet(seleccion)
-    registros = calcular_sentimiento(jugadores, cache_path=cache_path)
-    sentimiento = top_por_sentimiento(registros, 3)
-    con_datos = sum(1 for r in registros if r.get('sentimiento') is not None)
-    print(f'  {con_datos}/{len(jugadores)} jugadores con datos de sentimiento')
-
     print('\n== Paso 3: borrador de tweet ==')
-    texto = componer_tweet(seleccion, sentimiento)
-    with open(TWEET_TXT, 'w', encoding='utf-8') as f:
-        f.write(texto + '\n')
-    print(texto)
-    print(f'\n({len(texto)} caracteres) guardado en {TWEET_TXT}')
-    return texto
+    resultado = generar_borrador(ranking)
+    con_datos = resultado['con_datos']
+    jugadores = resultado['jugadores']
+    print(f'  {con_datos}/{len(jugadores)} jugadores con datos de sentimiento')
+    print(resultado['texto'])
+    print(f"\n({len(resultado['texto'])} caracteres) guardado en {TWEET_TXT}")
+    return resultado['texto']
 
 
 if __name__ == '__main__':

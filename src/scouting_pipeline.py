@@ -483,12 +483,19 @@ def enriquecer_y_puntuar(filas_totw, api_fotmob, scorer=None):
     return df_unico, pd.DataFrame(no_resueltos)
 
 
-def generar_ranking_semanal(api_fotmob, inicio, fin, ligas=None, scorer=None):
+def generar_ranking_semanal(api_fotmob, inicio, fin, ligas=None, scorer=None, detalle=None):
+    """Ranking de la semana. `detalle` (opcional) recibe el conteo de ligas con TOTW.
+
+    Una liga cuenta solo si trajo al menos un jugador de TOTW: tener fixtures en la
+    semana sin TOTW publicado significa que la fecha aun no se publico, y eso no
+    debe habilitar la corrida semanal.
+    """
     inicio_dt, fin_dt = _parse_fecha(inicio), _parse_fecha(fin)
     if inicio_dt is None or fin_dt is None or inicio_dt >= fin_dt:
         raise ValueError('Intervalo semanal invalido')
     ligas = ligas if ligas is not None else ligas_activas()
     totw_semana, avisos = [], []
+    ligas_con_totw, ligas_sin_totw = [], []
     for liga in ligas:
         try:
             filas, avisos_liga = recolectar_totw_semana(api_fotmob, liga, inicio_dt, fin_dt)
@@ -497,6 +504,18 @@ def generar_ranking_semanal(api_fotmob, inicio, fin, ligas=None, scorer=None):
             continue
         totw_semana.extend(filas)
         avisos.extend(avisos_liga)
+        (ligas_con_totw if filas else ligas_sin_totw).append(liga['nombre'])
+    if detalle is not None:
+        iso = inicio_dt.isocalendar()
+        detalle.update({
+            'semana': f'{iso.year}-W{iso.week:02d}',
+            'inicio': inicio_dt.date().isoformat(),
+            'fin': fin_dt.date().isoformat(),
+            'ligas_consultadas': [liga['nombre'] for liga in ligas],
+            'ligas_con_totw': ligas_con_totw,
+            'ligas_sin_totw': ligas_sin_totw,
+            'n_ligas_con_totw': len(ligas_con_totw),
+        })
     if not totw_semana:
         return pd.DataFrame(), pd.DataFrame(), avisos
 
@@ -535,12 +554,12 @@ def guardar_resultados(ranking, no_resueltos, inicio, directorio=DATA_DIR):
     return ranking_path, no_resueltos_path
 
 
-def main():
+def main(detalle=None):
     inicio, fin = ultimo_bloque_semanal_completo()
     fotmob = FotMobApi()
     try:
         ranking, no_resueltos, avisos = generar_ranking_semanal(
-            fotmob, inicio, fin)
+            fotmob, inicio, fin, detalle=detalle)
         for aviso in avisos:
             print(f'[aviso] {aviso}')
         if ranking.empty:

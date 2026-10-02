@@ -353,84 +353,88 @@ h2 {
 
 .bloque__cabecera p { color: var(--pluma); max-width: 62ch; }
 
-/* ---------- tweets ---------- */
+/* ---------- corte por puesto ---------- */
 
-.tweets {
+.puestos-wrap {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr));
-  align-items: start;
-  gap: 34px 40px;
+  gap: 52px;
 }
 
-.tweet {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding-top: 16px;
-  border-top: 1px solid var(--linea);
-}
-
-.tweet__cabecera {
+.semana__cabecera {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--linea);
 }
 
-.tweet__semana {
+.semana__cabecera h3 {
   font-family: var(--display);
-  font-size: 18px;
+  font-size: 22px;
+  font-weight: 400;
 }
 
-.tweet__estado {
+.semana__rango { font-size: 14px; color: var(--tinta); }
+.semana__estado { font-size: 12.5px; color: var(--pluma); }
+
+.semana__puestos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 32px 44px;
+  padding-top: 18px;
+}
+
+.puesto__titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--oro);
+  margin-bottom: 4px;
+}
+
+.puesto__titulo b {
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 400;
+  color: var(--oro);
+}
+
+.puesto__titulo span { font-size: 13px; color: var(--pluma); }
+
+.puesto__fila {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 42px 44px;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(27, 53, 104, 0.55);
+}
+.puesto__fila:hover { background: var(--pizarra-2); }
+
+.puesto__lugar {
+  font-family: var(--display);
+  font-size: 13px;
+  color: var(--pluma);
+  text-align: right;
+}
+
+.puesto__nombre { font-size: 16px; font-weight: 600; line-height: 1.35; }
+.puesto__nombre small {
+  display: block;
   font-size: 12px;
+  font-weight: 400;
   color: var(--pluma);
 }
 
-.tweet__texto {
-  margin: 0;
-  font-family: var(--sans);
-  font-size: 14.5px;
-  line-height: 1.62;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.tweet__texto b { color: var(--oro); font-weight: 700; }
+.puesto__ga { font-size: 15px; text-align: right; }
 
-.tweet__sent {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
+.puesto__sent { font-size: 13px; text-align: right; color: var(--pluma); }
+.puesto__sent--pos { color: var(--jade); }
+.puesto__sent--neg { color: var(--sirena); }
 
-.chip {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 7px;
-  padding: 5px 10px;
-  border: 1px solid var(--linea);
-  font-size: 12.5px;
-}
-.chip b { font-weight: 600; }
-.chip i { font-style: normal; font-size: 11px; color: var(--pluma); }
-.chip--pos b { color: var(--jade); }
-.chip--neg b { color: var(--sirena); }
-.chip--nulo { color: var(--pluma); border-style: dashed; }
-
-.copiar {
-  appearance: none;
-  align-self: flex-start;
-  border: 1px solid var(--oro);
-  background: transparent;
-  color: var(--oro);
-  font-family: var(--sans);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 8px 14px;
-  cursor: pointer;
-}
-.copiar:hover { background: var(--oro); color: var(--pizarra); }
-.copiar[data-estado='hecho'] { border-color: var(--jade); color: var(--jade); }
+.puesto__vacio { font-size: 14px; color: var(--pluma); padding: 10px 0; }
 
 /* ---------- histórico ---------- */
 
@@ -672,6 +676,7 @@ h2 {
   .fila { grid-template-columns: 34px minmax(0, 1fr) 90px; }
   .fila { column-gap: 12px; }
   .fila__nombre { font-size: 18px; }
+  .semana__puestos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .radar__intro { grid-template-columns: 1fr; }
   .radar__intro h1 { grid-column: 1; grid-row: auto; margin-bottom: 8px; }
   .radar__intro p { grid-column: 1; }
@@ -687,6 +692,8 @@ h2 {
   .bug__valor { font-size: 17px; white-space: nowrap; }
   .radar { padding: 44px 0 56px; }
   .bloque { padding: 52px 0; }
+  .puestos-wrap { gap: 40px; }
+  .semana__puestos { grid-template-columns: 1fr; gap: 26px; }
   .planilla__cabecera { display: none; }
   .fila {
     grid-template-columns: 28px minmax(0, 1fr) 80px;

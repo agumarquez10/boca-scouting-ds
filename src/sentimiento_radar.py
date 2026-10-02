@@ -63,11 +63,19 @@ def _clave(nombre, club):
     return f'{nombre}|{club}'
 
 
+def _guardar_cache(cache, cache_path):
+    pd.DataFrame(list(cache.values())).to_csv(
+        cache_path, index=False, encoding='utf-8-sig')
+
+
 def calcular_sentimiento(jugadores, engine=None, cache_path=None, calcular=None):
     """Calcula sentimiento de [(nombre, club)] reutilizando la cache semanal.
 
     `calcular` permite inyectar el calculo (tests sin red). Cachea tambien los
     jugadores sin datos para no reintentar la cuota en la misma semana.
+
+    La cache se escribe incrementalmente (un jugador por vez) para que una
+    corrida interrumpida no pierda el trabajo hecho ni la cuota ya consumida.
     """
     calcular = calcular or sentimiento_jugador
     cache = {}
@@ -82,10 +90,14 @@ def calcular_sentimiento(jugadores, engine=None, cache_path=None, calcular=None)
         if clave in cache:
             registros.append(cache[clave])
             continue
-        registros.append(calcular(nombre, club, engine=engine))
+        registro = calcular(nombre, club, engine=engine)
+        cache[clave] = registro
+        registros.append(registro)
+        if cache_path:
+            _guardar_cache(cache, cache_path)
 
-    if cache_path:
-        pd.DataFrame(registros).to_csv(cache_path, index=False, encoding='utf-8-sig')
+    if cache_path and cache:
+        _guardar_cache(cache, cache_path)
     return registros
 
 
