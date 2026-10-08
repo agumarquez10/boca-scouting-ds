@@ -237,7 +237,7 @@
     liga: function (j) { return sinAcentos(j.liga); },
     apariciones_top5: function (j) { return j.apariciones_top5; },
     tasa_top5: function (j) { return j.tasa_top5; },
-    mejor_posicion: function (j) { return j.mejor_posicion; },
+    apariciones_totw: function (j) { return j.apariciones_totw; },
     ultima_semana: function (j) { return j.ultima_semana; }
   };
 
@@ -262,7 +262,9 @@
       ' semanas con datos para la liga';
     tr.appendChild(tasa);
 
-    tr.appendChild(el('td', null, j.mejor_posicion));
+    tr.appendChild(el('td', null,
+      j.apariciones_totw === null || j.apariciones_totw === undefined
+        ? '—' : j.apariciones_totw));
     tr.appendChild(el('td', null, j.ultima_semana));
     return tr;
   }
@@ -360,7 +362,7 @@
         } else {
           historicoColumna = campo;
           historicoSentido = (campo === 'nombre' || campo === 'liga' ||
-            campo === 'posicion' || campo === 'mejor_posicion') ? 1 : -1;
+            campo === 'posicion') ? 1 : -1;
         }
         historicoMostrarTodos = false;
         pintarHistorico();

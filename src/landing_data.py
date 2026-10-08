@@ -195,6 +195,7 @@ def construir_historico(directorio):
             'liga': f['liga_principal'],
             'clubes': f['clubes'],
             'apariciones_top5': _int(f['apariciones_top5']),
+            'apariciones_totw': _int(f.get('apariciones_totw')),
             'semanas_en_ranking': _int(f['semanas_en_ranking']),
             'semanas_activas_liga': _int(f['semanas_activas_liga']),
             'tasa_top5': _num(f['tasa_top5'], 3),

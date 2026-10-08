@@ -8,7 +8,8 @@ from ranking_historico import (
 )
 
 
-def fila(pid, nombre, liga, club, ranking, score, prob, goles, asistencias):
+def fila(pid, nombre, liga, club, ranking, score, prob, goles, asistencias,
+         apariciones_totw_semana=1):
     return {
         'player_id_fotmob': pid,
         'nombre': nombre,
@@ -19,6 +20,7 @@ def fila(pid, nombre, liga, club, ranking, score, prob, goles, asistencias):
         'probabilidad_adn': prob,
         'goles': goles,
         'asistencias': asistencias,
+        'apariciones_totw_semana': apariciones_totw_semana,
     }
 
 
@@ -31,15 +33,15 @@ def escribir(directorio, year, week, filas):
 @pytest.fixture
 def rankings_tmp(tmp_path):
     escribir(tmp_path, 2026, 34, [
-        fila(1, 'Uno', 'A', 'ClubA', 1, 0.9, 0.8, 5, 1),
+        fila(1, 'Uno', 'A', 'ClubA', 1, 0.9, 0.8, 5, 1, apariciones_totw_semana=2),
         fila(2, 'Dos', 'A', 'ClubA', 6, 0.5, 0.4, 3, 0),
         fila(3, 'Tres', 'B', 'ClubB', 1, 0.95, 0.9, 7, 2),
     ])
     escribir(tmp_path, 2026, 35, [
-        fila(1, 'Uno', 'A', 'ClubA', 3, 0.8, 0.7, 10, 2),
+        fila(1, 'Uno', 'A', 'ClubA', 3, 0.8, 0.7, 10, 2, apariciones_totw_semana=3),
     ])
     escribir(tmp_path, 2026, 36, [
-        fila(2, 'Dos', 'A', 'ClubA', 2, 0.7, 0.6, 4, 1),
+        fila(2, 'Dos', 'A', 'ClubA', 2, 0.7, 0.6, 4, 1, apariciones_totw_semana=2),
     ])
     (tmp_path / 'ranking_historico_acumulado.csv').write_text('x', encoding='utf-8')
     (tmp_path / 'otro.csv').write_text('x', encoding='utf-8')
@@ -66,12 +68,14 @@ def test_agregar_apariciones_cuenta_top5_y_tasa_normalizada(rankings_tmp):
 
     uno = por_id.loc[1]
     assert uno['apariciones_top5'] == 2
+    assert uno['apariciones_totw'] == 5
     assert uno['semanas_en_ranking'] == 2
     assert uno['semanas_activas_liga'] == 3
     assert uno['tasa_top5'] == pytest.approx(2 / 3, abs=1e-4)
 
     dos = por_id.loc[2]
     assert dos['apariciones_top5'] == 1
+    assert dos['apariciones_totw'] == 3
     assert dos['tasa_top5'] == pytest.approx(1 / 3, abs=1e-4)
 
     tres = por_id.loc[3]
@@ -103,6 +107,19 @@ def test_agregar_apariciones_deduplica_jugador_semana(tmp_path):
     assert len(acumulado) == 1
     assert acumulado.loc[0, 'mejor_posicion'] == 2
     assert acumulado.loc[0, 'apariciones_top5'] == 1
+    assert acumulado.loc[0, 'apariciones_totw'] == 1
+
+
+def test_apariciones_totw_incompletas_quedan_desconocidas(tmp_path):
+    con_conteo = fila(1, 'Uno', 'A', 'ClubA', 1, 0.9, 0.8, 5, 1,
+                      apariciones_totw_semana=2)
+    sin_conteo = fila(1, 'Uno', 'A', 'ClubA', 2, 0.8, 0.7, 6, 1)
+    sin_conteo.pop('apariciones_totw_semana')
+    escribir(tmp_path, 2026, 34, [con_conteo])
+    escribir(tmp_path, 2026, 35, [sin_conteo])
+
+    acumulado = agregar_apariciones(cargar_rankings(tmp_path))
+    assert pd.isna(acumulado.loc[0, 'apariciones_totw'])
 
 
 def test_resumen_por_liga(rankings_tmp):

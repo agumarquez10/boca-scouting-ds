@@ -13,7 +13,8 @@ from landing_data import (
 )
 
 
-def fila(pid, nombre, liga, club, posicion, ranking, score, prob, goles, asistencias):
+def fila(pid, nombre, liga, club, posicion, ranking, score, prob, goles, asistencias,
+         apariciones_totw_semana=1):
     return {
         'player_id_fotmob': pid,
         'nombre': nombre,
@@ -29,6 +30,7 @@ def fila(pid, nombre, liga, club, posicion, ranking, score, prob, goles, asisten
         'partidos_temporada': 20,
         'torneos_stats': 'Liga Profesional, Copa Argentina',
         'rating_totw': 8.5,
+        'apariciones_totw_semana': apariciones_totw_semana,
     }
 
 
@@ -41,11 +43,14 @@ def escribir(directorio, year, week, filas):
 @pytest.fixture
 def semanas_tmp(tmp_path):
     escribir(tmp_path, 2026, 39, [
-        fila(1, 'Ronaldo Martinez', 'Argentina', 'Velez', 'Centre-Forward', 2, 0.8, 0.7, 6, 1),
-        fila(2, 'Bruno Vega', 'Argentina', 'Talleres', 'Right Winger', 1, 0.95, 0.9, 9, 2),
+        fila(1, 'Ronaldo Martinez', 'Argentina', 'Velez', 'Centre-Forward', 2, 0.8, 0.7, 6, 1,
+             apariciones_totw_semana=2),
+        fila(2, 'Bruno Vega', 'Argentina', 'Talleres', 'Right Winger', 1, 0.95, 0.9, 9, 2,
+             apariciones_totw_semana=1),
     ])
     escribir(tmp_path, 2026, 40, [
-        fila(2, 'Bruno Vega', 'Argentina', 'Talleres', 'Right Winger', 1, 0.9, 0.85, 10, 3),
+        fila(2, 'Bruno Vega', 'Argentina', 'Talleres', 'Right Winger', 1, 0.9, 0.85, 10, 3,
+             apariciones_totw_semana=3),
     ])
     return tmp_path
 
@@ -119,6 +124,7 @@ def test_historico_consolida_por_identidad(semanas_tmp):
     assert len(historico) == 2
     assert historico[0]['nombre'] == 'Bruno Vega'
     assert historico[0]['apariciones_top5'] == 2
+    assert historico[0]['apariciones_totw'] == 4
     assert historico[0]['semanas_activas_liga'] == 2
     assert por_liga[0]['liga'] == 'Argentina'
     assert por_liga[0]['apariciones_top5'] == 3
@@ -190,6 +196,7 @@ def test_escribir_js_produce_json_serializable(tmp_path, semanas_tmp):
     assert 'rating' not in payload['modelo']['features']
     assert len(payload['semanas']) == 2
     assert payload['historico'][0]['posicion'] == 1
+    assert payload['historico'][0]['apariciones_totw'] == 4
 
 
 def test_web_data_js_esta_actualizado():
@@ -201,6 +208,7 @@ def test_web_data_js_esta_actualizado():
     payload = json.loads(contenido.split('=', 1)[1].strip().rstrip(';'))
     assert payload['semanas']
     assert payload['historico']
+    assert 'apariciones_totw' in payload['historico'][0]
     assert payload['modelo']['penalty'] == 'l1'
     assert 'acumulado' in payload['sentimiento']
     assert 'detalle' in payload['sentimiento']

@@ -6,8 +6,9 @@ Lee los `data/ranking_jugadores_fecha_YYYY-Www.csv` y consolida por
 Criterio: contar solo el top 5 crudo favorece a las ligas con mas TOTW (Brasil
 aporta ~60% de las apariciones). Por eso se reporta tambien `tasa_top5`, la
 fraccion de semanas en que la liga principal del jugador tuvo TOTW y el jugador
-entro al top 5. Los goles/asistencias son acumulados de temporada: se toman de
-la ultima aparicion, NO se suman entre semanas.
+entro al top 5. `apariciones_totw` suma las selecciones de FotMob de las semanas.
+Los goles/asistencias son acumulados de temporada: se toman de la ultima
+aparicion, NO se suman entre semanas.
 """
 
 import os
@@ -64,6 +65,11 @@ def agregar_apariciones(df, top=5):
         en_top = int((grupo['ranking'] <= top).sum())
         mejor = grupo.iloc[0]
         ultima = grupo.sort_values('semana').iloc[-1]
+        apariciones_totw = None
+        if 'apariciones_totw_semana' in grupo.columns:
+            conteos_totw = pd.to_numeric(grupo['apariciones_totw_semana'], errors='coerce')
+            if conteos_totw.notna().all():
+                apariciones_totw = int(conteos_totw.sum())
         prob = (float(grupo['probabilidad_adn'].mean())
                 if 'probabilidad_adn' in grupo.columns else float('nan'))
         filas.append({
@@ -72,6 +78,7 @@ def agregar_apariciones(df, top=5):
             'liga_principal': liga_principal,
             'clubes': ', '.join(sorted(grupo['club'].dropna().astype(str).unique())),
             'apariciones_top5': en_top,
+            'apariciones_totw': apariciones_totw,
             'semanas_en_ranking': int(grupo['semana'].nunique()),
             'semanas_activas_liga': semanas_liga,
             'tasa_top5': round(en_top / semanas_liga, 4) if semanas_liga else 0.0,
@@ -119,7 +126,7 @@ def main():
     acumulado.to_csv(ruta, index=False, encoding='utf-8-sig')
     print(f'{ruta} ({len(acumulado)} jugadores, {df["semana"].nunique()} semanas)')
     cols = ['posicion_historica', 'nombre', 'liga_principal', 'apariciones_top5',
-            'tasa_top5', 'score_max']
+            'apariciones_totw', 'tasa_top5', 'score_max']
     print(acumulado.head(10)[cols].to_string(index=False))
     return acumulado
 
