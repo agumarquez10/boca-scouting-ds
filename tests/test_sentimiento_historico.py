@@ -28,7 +28,8 @@ def _ranking():
 def _calcular(nombre, club, engine=None):
     return {'nombre': nombre, 'club': club, 'sentimiento': float(nombre[-1]),
             'n_fuentes': 2, 'fuentes': 'prensa,youtube',
-            'youtube_valor': 1.0, 'prensa_valor': 0.5}
+            'youtube_valor': 1.0, 'prensa_valor': 0.5,
+            'youtube_n_comentarios': 12, 'prensa_n_textos': 7}
 
 
 def test_jugadores_de_semana_incluye_puesto():
@@ -57,6 +58,8 @@ def test_barrer_semanas_calcula_y_cachea(tmp_path):
     assert len(df) == 6
     assert set(df['semana']) == {'2026-W36'}
     assert set(df['puesto']) == {'DEL', 'MED', 'DEF'}
+    assert set(df['youtube_n_comentarios']) == {12}
+    assert set(df['prensa_n_textos']) == {7}
     assert (tmp_path / 'sentimiento_radar_2026-W36.csv').exists()
 
 

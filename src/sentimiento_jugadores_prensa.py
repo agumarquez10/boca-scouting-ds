@@ -2,7 +2,7 @@
 
 Generaliza el enfoque de Olé: consulta en una sola query `site:` una lista de
 medios deportivos (Argentina, Peru, Chile, Paraguay + internacionales) y
-promedia el sentimiento de los titulares. Escala -50 a +50.
+promedia el sentimiento de títulos y descripciones del RSS. Escala -50 a +50.
 
 Gratis y sin API key. Limitacion: el motor de sentimiento es en espanol, por eso
 no se incluyen medios en portugues (Brasil) para no meter ruido.
@@ -109,11 +109,11 @@ def sentimiento_jugador_prensa(nombre, club='', engine=None, medios=None):
     engine = engine or SentimientoEngine(usar_bert=False)
     textos = notas_prensa(nombre, club, medios)
     if not textos:
-        return {'ok': False, 'error': 'sin notas', 'valor': 0.0, 'n_notas': 0}
+        return {'ok': False, 'error': 'sin textos', 'valor': 0.0, 'n_textos': 0}
     puntajes = engine.puntuar_lote(textos)
     return {
         'ok': True,
         'valor': round(sum(puntajes) / len(puntajes), 1),
-        'n_notas': len(textos),
+        'n_textos': len(textos),
         'error': '',
     }

@@ -72,7 +72,9 @@ def _sentimiento_semana(semana, directorio):
              'sentimiento': _num(f.get('sentimiento'), 1),
              'n_fuentes': _int(f.get('n_fuentes')) or 0,
              'youtube': _num(f.get('youtube_valor'), 1),
-             'prensa': _num(f.get('prensa_valor'), 1)}
+             'prensa': _num(f.get('prensa_valor'), 1),
+             'youtube_n_comentarios': _int(f.get('youtube_n_comentarios')),
+             'prensa_n_textos': _int(f.get('prensa_n_textos'))}
             for f in df.to_dict('records')]
 
 
@@ -118,6 +120,9 @@ def _puestos(df, registros):
                     'n_fuentes': found['n_fuentes'] if found else 0,
                     'youtube': found['youtube'] if found else None,
                     'prensa': found['prensa'] if found else None,
+                    'youtube_n_comentarios': (found['youtube_n_comentarios']
+                                              if found else None),
+                    'prensa_n_textos': found['prensa_n_textos'] if found else None,
                 })
         salida.append({'macro': macro, 'jugadores': jugadores})
     return salida
@@ -130,15 +135,19 @@ def _top_sentimiento(puestos):
     cacheado, ordenados de mayor a menor. Sin cache la lista queda vacia.
     """
     registros = [{'nombre': j['nombre'], 'club': j['club'], 'sentimiento': j['sentimiento'],
-                  'goles': j['goles'], 'asistencias': j['asistencias'],
-                  'n_fuentes': j['n_fuentes'], 'youtube': j['youtube'],
-                  'prensa': j['prensa']}
-                 for p in puestos for j in p['jugadores']]
+                   'goles': j['goles'], 'asistencias': j['asistencias'],
+                   'n_fuentes': j['n_fuentes'], 'youtube': j['youtube'],
+                   'prensa': j['prensa'],
+                   'youtube_n_comentarios': j['youtube_n_comentarios'],
+                   'prensa_n_textos': j['prensa_n_textos']}
+                  for p in puestos for j in p['jugadores']]
     return [{'nombre': r['nombre'], 'club': r['club'],
-             'goles': r['goles'], 'asistencias': r['asistencias'],
-             'sentimiento': _num(r['sentimiento'], 1),
-             'n_fuentes': r['n_fuentes'], 'youtube': r['youtube'], 'prensa': r['prensa']}
-            for r in top_por_sentimiento(registros, 3)]
+              'goles': r['goles'], 'asistencias': r['asistencias'],
+              'sentimiento': _num(r['sentimiento'], 1),
+              'n_fuentes': r['n_fuentes'], 'youtube': r['youtube'], 'prensa': r['prensa'],
+              'youtube_n_comentarios': _int(r.get('youtube_n_comentarios')),
+              'prensa_n_textos': _int(r.get('prensa_n_textos'))}
+             for r in top_por_sentimiento(registros, 3)]
 
 
 def construir_semanas(directorio):
@@ -241,6 +250,8 @@ def construir_sentimiento(directorio):
                 'n_fuentes': _int(f.get('n_fuentes')) or 0,
                 'youtube': _num(f.get('youtube_valor'), 1),
                 'prensa': _num(f.get('prensa_valor'), 1),
+                'youtube_n_comentarios': _int(f.get('youtube_n_comentarios')),
+                'prensa_n_textos': _int(f.get('prensa_n_textos')),
             })
 
     fuentes = {}

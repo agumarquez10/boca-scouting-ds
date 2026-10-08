@@ -5,6 +5,9 @@ Combina YouTube (comentarios de la gente) y prensa deportiva multi-medio
 Escala -50 a +50. Cachea por jugador en `data/sentimiento_radar_YYYY-Www.csv`
 para no repetir consultas.
 
+Los pesos 60/40 son una heuristica provisional, no validada con etiquetas de
+sentimiento. Si solo hay una fuente disponible, se usa su valor completo.
+
 La cobertura es despareja y los medios en portugues quedan fuera (el motor es
 en espanol). Los jugadores sin ninguna fuente no entran al top (faltante != 0).
 """
@@ -20,12 +23,13 @@ sys.path.insert(0, SCRIPT_DIR)
 from rutas import dir_datos
 
 DATA_DIR = dir_datos()
+# Pesos heurísticos provisionales: todavía no se validaron con etiquetas.
 PESO_MEDIOS = 0.6
 PESO_GENTE = 0.4
 
 
 def combinar_fuentes(yt, prensa):
-    """Combina YouTube y prensa con prioridad a medios. None si no hay ninguna."""
+    """Mezcla 60/40 cuando hay ambas fuentes; usa al 100% la única disponible."""
     aportes = []
     if prensa.get('ok'):
         aportes.append((prensa['valor'], PESO_MEDIOS, 'prensa'))
@@ -56,6 +60,8 @@ def sentimiento_jugador(nombre, club, engine=None):
         'fuentes': ','.join(fuentes),
         'youtube_valor': yt.get('valor') if yt.get('ok') else None,
         'prensa_valor': prensa.get('valor') if prensa.get('ok') else None,
+        'youtube_n_comentarios': yt.get('n_comentarios'),
+        'prensa_n_textos': prensa.get('n_textos'),
     }
 
 

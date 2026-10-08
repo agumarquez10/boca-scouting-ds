@@ -3,6 +3,7 @@ import pandas as pd
 from sentimiento_radar import (
     calcular_sentimiento,
     combinar_fuentes,
+    sentimiento_jugador,
     top_por_sentimiento,
 )
 
@@ -21,6 +22,48 @@ def test_combinar_fuentes_solo_una():
 
 def test_combinar_fuentes_sin_datos():
     assert combinar_fuentes({'ok': False}, {'ok': False}) == (None, [])
+
+
+def test_sentimiento_jugador_conserva_cantidades_por_fuente(monkeypatch):
+    import sentimiento_jugadores_prensa as modulo_prensa
+    import sentimiento_jugadores_youtube as modulo_youtube
+
+    monkeypatch.setattr(
+        modulo_youtube, 'sentimiento_jugador_youtube',
+        lambda nombre, club, engine=None: {
+            'ok': True, 'valor': 2.0, 'n_comentarios': 17,
+        })
+    monkeypatch.setattr(
+        modulo_prensa, 'sentimiento_jugador_prensa',
+        lambda nombre, club, engine=None: {
+            'ok': True, 'valor': 4.0, 'n_textos': 9,
+        })
+
+    registro = sentimiento_jugador('Jugador', 'Club', engine=object())
+
+    assert registro['sentimiento'] == 3.2
+    assert registro['youtube_n_comentarios'] == 17
+    assert registro['prensa_n_textos'] == 9
+
+
+def test_sentimiento_jugador_permite_respuestas_legacy_sin_conteos(monkeypatch):
+    import sentimiento_jugadores_prensa as modulo_prensa
+    import sentimiento_jugadores_youtube as modulo_youtube
+
+    monkeypatch.setattr(
+        modulo_youtube, 'sentimiento_jugador_youtube',
+        lambda nombre, club, engine=None: {'ok': False, 'valor': 0.0})
+    monkeypatch.setattr(
+        modulo_prensa, 'sentimiento_jugador_prensa',
+        lambda nombre, club, engine=None: {
+            'ok': True, 'valor': 4.0,
+        })
+
+    registro = sentimiento_jugador('Jugador', 'Club', engine=object())
+
+    assert registro['sentimiento'] == 4.0
+    assert registro['youtube_n_comentarios'] is None
+    assert registro['prensa_n_textos'] is None
 
 
 def _registro(nombre, club, sentimiento, n=1):

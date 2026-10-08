@@ -59,6 +59,8 @@ def _registro_de_sentimiento(semana, nombre, club, registro, puesto):
         'fuentes': registro.get('fuentes', ''),
         'youtube_valor': registro.get('youtube_valor'),
         'prensa_valor': registro.get('prensa_valor'),
+        'youtube_n_comentarios': registro.get('youtube_n_comentarios'),
+        'prensa_n_textos': registro.get('prensa_n_textos'),
     }
 
 

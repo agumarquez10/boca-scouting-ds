@@ -91,7 +91,8 @@ def test_sentimiento_cacheado_se_une_al_jugador(tmp_path):
     ])
     pd.DataFrame([
         {'nombre': 'Uno', 'club': 'Alianza', 'sentimiento': 1.5, 'n_fuentes': 2,
-         'fuentes': 'prensa,youtube', 'youtube_valor': 3.0, 'prensa_valor': 0.0},
+         'fuentes': 'prensa,youtube', 'youtube_valor': 3.0, 'prensa_valor': 0.0,
+         'youtube_n_comentarios': 18, 'prensa_n_textos': 6},
         {'nombre': 'Dos', 'club': 'Sporting', 'sentimiento': 4.2, 'n_fuentes': 1,
          'fuentes': 'prensa', 'youtube_valor': None, 'prensa_valor': 4.2},
     ]).to_csv(tmp_path / 'sentimiento_radar_2026-W41.csv', index=False, encoding='utf-8-sig')
@@ -107,6 +108,10 @@ def test_sentimiento_cacheado_se_une_al_jugador(tmp_path):
     assert [j['nombre'] for j in top] == ['Dos', 'Uno']
     assert [j['sentimiento'] for j in top] == [4.2, 1.5]
     assert top[0]['goles'] == 2 and top[0]['asistencias'] == 4
+    assert top[0]['youtube_n_comentarios'] is None
+    assert top[0]['prensa_n_textos'] is None
+    assert top[1]['youtube_n_comentarios'] == 18
+    assert top[1]['prensa_n_textos'] == 6
 
 
 def test_historico_consolida_por_identidad(semanas_tmp):
@@ -136,13 +141,16 @@ def test_construir_sentimiento_agrega_fuentes_desde_el_detalle(tmp_path):
         [
             {'semana': '2026-W34', 'puesto': 'DEL', 'nombre': 'Uno', 'club': 'A',
              'sentimiento': 4.0, 'n_fuentes': 2, 'fuentes': 'prensa,youtube',
-             'youtube_valor': 3.0, 'prensa_valor': 5.0},
+             'youtube_valor': 3.0, 'prensa_valor': 5.0,
+             'youtube_n_comentarios': 14, 'prensa_n_textos': 4},
             {'semana': '2026-W35', 'puesto': 'DEL', 'nombre': 'Uno', 'club': 'A',
              'sentimiento': 2.0, 'n_fuentes': 2, 'fuentes': 'prensa,youtube',
-             'youtube_valor': 1.0, 'prensa_valor': 3.0},
+             'youtube_valor': 1.0, 'prensa_valor': 3.0,
+             'youtube_n_comentarios': 8, 'prensa_n_textos': 2},
             {'semana': '2026-W34', 'puesto': 'MED', 'nombre': 'Dos', 'club': 'B',
              'sentimiento': None, 'n_fuentes': 1, 'fuentes': 'prensa',
-             'youtube_valor': None, 'prensa_valor': -1.0},
+             'youtube_valor': None, 'prensa_valor': -1.0,
+             'youtube_n_comentarios': 0, 'prensa_n_textos': 5},
         ],
         [
             {'nombre': 'Uno', 'club': 'A', 'semanas_medidas': 2, 'sentimiento_medio': 3.0,
@@ -156,6 +164,10 @@ def test_construir_sentimiento_agrega_fuentes_desde_el_detalle(tmp_path):
     detalle, acumulado = construir_sentimiento(tmp_path)
     assert len(detalle) == 3
     assert detalle[0]['youtube'] == 3.0
+    assert detalle[0]['youtube_n_comentarios'] == 14
+    assert detalle[0]['prensa_n_textos'] == 4
+    assert detalle[1]['youtube_n_comentarios'] == 8
+    assert detalle[1]['prensa_n_textos'] == 2
     assert detalle[2]['sentimiento'] is None
     assert [j['nombre'] for j in acumulado] == ['Uno', 'Dos']
     assert [j['posicion'] for j in acumulado] == [1, 2]

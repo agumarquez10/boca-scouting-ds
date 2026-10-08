@@ -57,13 +57,13 @@ def test_sentimiento_jugador_prensa_promedia(monkeypatch):
             return [10.0, -10.0]
 
     r = modulo.sentimiento_jugador_prensa('X', 'Y', engine=FakeEngine())
-    assert r['ok'] and r['n_notas'] == 2 and r['valor'] == 0.0
+    assert r['ok'] and r['n_textos'] == 2 and r['valor'] == 0.0
 
 
-def test_sentimiento_jugador_prensa_sin_notas(monkeypatch):
+def test_sentimiento_jugador_prensa_sin_textos(monkeypatch):
     import sentimiento_jugadores_prensa as modulo
 
     monkeypatch.setattr(modulo, 'notas_prensa',
                         lambda nombre, club='', medios=None: [])
     r = modulo.sentimiento_jugador_prensa('X', 'Y')
-    assert not r['ok'] and r['n_notas'] == 0
+    assert not r['ok'] and r['n_textos'] == 0

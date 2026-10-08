@@ -1,16 +1,17 @@
 # Scouting & Hype Boca Juniors
 
-Radar semanal de jugadores destacados en los equipos de la fecha de varias
-ligas. La L1 ordena qué perfiles se parecen más a las etiquetas manuales de
-ADN Boca; el siguiente objetivo es sumar sentimiento real y publicar el top 5.
+Radar semanal de scouting que explora perfiles con ADN Boca entre los jugadores
+destacados de cinco ligas. Combina estadísticas de temporada, etiquetas manuales
+del proyecto y una señal exploratoria de menciones en YouTube y prensa. Genera
+listas para analizar y un borrador de tweet; no automatiza fichajes ni publica.
 
 ## Arquitectura
 
 ```
-FotMob Team of the Week + fixtures ─┐
+Equipos de la fecha + fixtures FotMob ─┐
 FotMob playerStats (todos los torneos de club)├─► scouting_pipeline.py ─► ranking_jugadores_fecha_YYYY-Www.csv
 modelo L1 + scaler + encoder ─────────┘                                  │
-                                                                           └─► corrida_semanal.py ─┬─► sentiment_radar.py ─► tweet_top5.txt (borrador)
+                                                                           └─► corrida_semanal.py ─┬─► sentimiento_radar.py ─► tweet_top5.txt (borrador)
                                                         (gate de 3 ligas)    └─► landing_data.py ─► web/data.js
 ```
 
@@ -23,33 +24,37 @@ API ni recalcula el modelo. La página (`web/index.html` + `styles.css` + `app.j
 es estática y se abre con doble click, sin servidor ni build.
 
 Muestra la planilla de la semana (top 5 ordenados por el score del modelo, con
-selector de semana), el corte por puesto y el top 5 de reacción de la hinchada. A
-pedido del usuario la página **no muestra el score ni la probabilidad
+selector de semana), el corte por puesto y el top 5 del indicador exploratorio de
+menciones. A pedido del usuario la página **no muestra el score ni la probabilidad
 calibrada** (el orden viene del modelo pero el número no se publica, y `data.js`
 ni siquiera lo exporta), ni la tabla histórica completa de apariciones en el top
-5, ni el texto del tweet, ni las deudas.
+5, ni el texto del borrador de tweet, ni las deudas técnicas.
 
-El corte por puesto son los tres grupos DEL/MED/DEF con sus tres candidatos, el
-mismo `seleccionar_por_puesto` que usa `automatizacion` para componer el tweet:
-la página muestra los nueve nombres con club y G+A, y el sentimiento si está
-cacheado para esa semana, pero no el texto del tweet. Debajo va un cuarto cuadro
-`SENT` con el top 3 por sentimiento entre esos nueve (`top_por_sentimiento`, el
-mismo criterio que la línea SENT del tweet). El cuadro SENT siempre reserva los
-tres lugares: sin `sentimiento_radar_YYYY-Www.csv` para esa semana muestra
-"sin datos de sentimiento", nunca 0, y se completa solo en la próxima corrida
-(`corrida_semanal.py` regenera la landing).
+El corte por puesto usa los grupos DEL/MED/DEF y selecciona hasta tres candidatos
+por grupo, como `seleccionar_por_puesto` en `automatizacion`. Puede haber menos de
+nueve. La página muestra el nombre, club, G+A y el indicador si está cacheado, pero
+no el texto del borrador. El cuadro `SENT` presenta hasta tres candidatos con los
+valores más altos entre los seleccionados por puesto (`top_por_sentimiento`). Si no
+hay medición guardada reserva los lugares y muestra "sin datos de sentimiento",
+nunca 0. La corrida semanal regenera la página; la landing no consulta las fuentes.
 
-La sección **La reacción de la hinchada** lee lo que deja
-`sentimiento_historico.py` (`data/sentimiento_historico.csv` y su consolidado),
-sin recalcular nada: la cobertura en una cinta (jugadores, mediciones, cuántos
-tienen las dos fuentes y la escala) y una tabla de tres columnas con el **top 5**
-de los 44 jugadores medidos, en el orden del consolidado (pico y después media).
-La reacción media va en barra divergente, con el cero al centro y jade hacia
-arriba / sirena hacia abajo. El desglose por jugador (prensa y/o YouTube) queda
-como tooltip en el valor de los cuadros por puesto. Ojo con el límite
-metodológico: el sentimiento se consulta el día que corre el script, no en la
-fecha de la semana, así que mide cómo se menciona hoy a los jugadores de aquel
-equipo de la fecha.
+La sección **El pulso de las menciones** lee lo que deja `sentimiento_historico.py`
+(`data/sentimiento_historico.csv` y su consolidado), sin recalcular nada. Muestra
+la cobertura y una tabla con el top 5 actual: el puntaje visible es la media, pero
+el orden prioriza el máximo registrado y luego la media. La barra diverge desde
+cero. En el corte por puesto, el tooltip desglosa el valor de cada fuente y, en
+nuevas mediciones, la cantidad de comentarios de YouTube y textos RSS de prensa.
+Límite metodológico: cada medición refleja el momento en que se pobló su caché, no
+la semana del TOTW; la página solo lee los datos guardados.
+
+La mezcla actual asigna 60% a prensa y 40% a YouTube cuando hay ambas fuentes;
+es una heurística provisional, no validada contra etiquetas de sentimiento. Si
+falta una fuente se usa la disponible al 100%, y si faltan ambas no se asigna
+puntaje. Las nuevas mediciones conservan el número de comentarios de YouTube y
+de textos RSS de prensa (títulos y descripciones; no artículos únicos) en la
+caché y el histórico. Las cachés anteriores no se vuelven a consultar
+automáticamente y no contienen estos conteos. Ninguno de los conteos es una
+medida de calidad.
 
 `web/data.js` sigue exportando el histórico completo de apariciones aunque la
 página no lo muestre, porque `corrida_semanal.py` lo lee en su log

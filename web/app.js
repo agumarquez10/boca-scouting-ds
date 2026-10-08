@@ -11,7 +11,19 @@
     'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
   var dec1 = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  
+
+  var NOMBRES_FEATURES = {
+    goles: 'Goles de la temporada',
+    asistencias: 'Asistencias de la temporada',
+    edad: 'Edad',
+    pos_Defensor_central: 'Posición: defensor central',
+    pos_Delantero: 'Posición: delantero',
+    pos_Extremo: 'Posición: extremo',
+    pos_Lateral: 'Posición: lateral',
+    pos_Mediocampista_central: 'Posición: mediocampista central',
+    pos_Mediocampista_ofensivo: 'Posición: mediocampista ofensivo'
+  };
+
   function el(tag, clase, texto) {
     var nodo = document.createElement(tag);
     if (clase) nodo.className = clase;
@@ -72,7 +84,7 @@
     caja.textContent = '';
 
     if (!semana.top.length) {
-      caja.appendChild(el('p', 'vacio', 'Esa semana no tuvo candidatos: la liga estaba en parón o el equipo de la fecha todavía no estaba publicado.'));
+      caja.appendChild(el('p', 'vacio', 'No hay candidatos guardados para esta semana. Puede que FotMob todavía no haya publicado el equipo de la fecha o que no hubiera datos suficientes para puntuarlo.'));
     } else {
       var cabecera = el('div', 'planilla__cabecera');
       cabecera.appendChild(el('span'));
@@ -116,7 +128,7 @@
     DEL: 'delanteros y extremos',
     MED: 'mediocampistas',
     DEF: 'laterales y centrales',
-    SENT: 'reacción de la hinchada y los medios'
+    SENT: 'tono de las menciones en YouTube y prensa'
   };
 
   function filaPuesto(j, lugar) {
@@ -125,13 +137,13 @@
     fila.appendChild(el('span', 'puesto__lugar', lugar));
 
     var nombre = el('p', 'puesto__nombre');
-    nombre.appendChild(document.createTextNode(j ? j.nombre : 'sin datos de sentimiento'));
+    nombre.appendChild(document.createTextNode(j ? j.nombre : 'sin medición'));
     if (j) nombre.appendChild(el('small', null, j.club));
     fila.appendChild(nombre);
 
     fila.appendChild(el('span', 'puesto__ga', j ? j.goles + '+' + j.asistencias : ''));
 
-var sent = el('span', 'puesto__sent');
+    var sent = el('span', 'puesto__sent');
     if (!j || j.sentimiento === null || j.sentimiento === undefined) {
       sent.textContent = '—';
     } else {
@@ -139,8 +151,20 @@ var sent = el('span', 'puesto__sent');
       else if (j.sentimiento < 0) sent.classList.add('puesto__sent--neg');
       sent.textContent = (j.sentimiento > 0 ? '+' : '') + dec1.format(j.sentimiento);
       var partes = [];
-      if (j.prensa !== null && j.prensa !== undefined) partes.push('prensa ' + dec1.format(j.prensa));
-      if (j.youtube !== null && j.youtube !== undefined) partes.push('YouTube ' + dec1.format(j.youtube));
+      if (j.prensa !== null && j.prensa !== undefined) {
+        var textoPrensa = 'Prensa ' + dec1.format(j.prensa);
+        if (j.prensa_n_textos !== null && j.prensa_n_textos !== undefined) {
+          textoPrensa += ' (' + j.prensa_n_textos + ' textos RSS)';
+        }
+        partes.push(textoPrensa);
+      }
+      if (j.youtube !== null && j.youtube !== undefined) {
+        var textoYouTube = 'YouTube ' + dec1.format(j.youtube);
+        if (j.youtube_n_comentarios !== null && j.youtube_n_comentarios !== undefined) {
+          textoYouTube += ' (' + j.youtube_n_comentarios + ' comentarios)';
+        }
+        partes.push(textoYouTube);
+      }
       sent.title = partes.join(' · ') + ' · ' + j.n_fuentes + (j.n_fuentes === 1 ? ' fuente' : ' fuentes');
     }
     fila.appendChild(sent);
@@ -173,8 +197,8 @@ var sent = el('span', 'puesto__sent');
     cabecera.appendChild(el('h3', null, semana.clave));
     cabecera.appendChild(el('span', 'semana__rango', rangoSemana(semana)));
     cabecera.appendChild(el('span', 'semana__estado', semana.medidos
-      ? semana.medidos + ' de ' + semana.seleccionados + ' con sentimiento'
-      : 'sin sentimiento medido'));
+      ? semana.medidos + ' de ' + semana.seleccionados + ' con medición'
+      : 'sin mediciones guardadas'));
     bloque.appendChild(cabecera);
 
     var puestos = el('div', 'semana__puestos');
@@ -209,12 +233,20 @@ var sent = el('span', 'puesto__sent');
 
   function pintarSentimiento() {
     var lista = DATOS.sentimiento.acumulado.slice(0, TOP_SENTIMIENTO);
+    var cuerpo = document.getElementById('cuerpo-sentimiento');
+    cuerpo.textContent = '';
+    if (!lista.length) {
+      var trVacio = el('tr');
+      var celdaVacia = el('td', null, 'Todavía no hay menciones guardadas para armar este top.');
+      celdaVacia.colSpan = 3;
+      trVacio.appendChild(celdaVacia);
+      cuerpo.appendChild(trVacio);
+      return;
+    }
     var tope = Math.max.apply(null, lista.map(function (j) {
       return Math.abs(j.sentimiento_medio);
     }).concat([1]));
 
-    var cuerpo = document.getElementById('cuerpo-sentimiento');
-    cuerpo.textContent = '';
     lista.forEach(function (j) {
       var tr = el('tr');
       tr.appendChild(el('td', null, j.posicion));
@@ -224,7 +256,7 @@ var sent = el('span', 'puesto__sent');
       nombre.appendChild(el('small', null, j.club));
       tr.appendChild(nombre);
 
-var celda = el('td');
+      var celda = el('td');
       var interior = el('div', 'celda-sent');
       interior.appendChild(barraSentimiento(j.sentimiento_medio, tope));
       interior.appendChild(el('b', j.sentimiento_medio < 0 ? 'neg' : 'pos',
@@ -243,10 +275,23 @@ var celda = el('td');
     [
       ['Jugadores medidos', String(DATOS.sentimiento.jugadores)],
       ['Mediciones', String(DATOS.sentimiento.mediciones)],
-      ['Con prensa y YouTube', conDos + ' de ' + DATOS.sentimiento.jugadores],
+      ['Con ambas fuentes', conDos + ' de ' + DATOS.sentimiento.jugadores],
       ['Escala', '−50 a +50']
     ].forEach(function (par) {
       cinta.appendChild(itemCinta(par[0], par[1]));
+    });
+  }
+
+  function pintarFeatures() {
+    var lista = document.getElementById('features');
+    if (!lista) return;
+    lista.textContent = '';
+    (DATOS.modelo.features || []).forEach(function (feature) {
+      var etiqueta = NOMBRES_FEATURES[feature]
+        || feature.replace(/^pos_/, '').replace(/_/g, ' ');
+      var item = el('li', null, etiqueta);
+      item.dataset.tipo = feature.indexOf('pos_') === 0 ? 'posicion' : 'estadistica';
+      lista.appendChild(item);
     });
   }
 
