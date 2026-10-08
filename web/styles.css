@@ -452,6 +452,50 @@ h2 {
 
 /* ---------- sentimiento ---------- */
 
+.historico__filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 18px 20px;
+  padding: 8px 0 18px;
+}
+
+.campo { display: flex; flex-direction: column; gap: 6px; }
+.campo span {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pluma);
+}
+.campo input,
+.campo select {
+  appearance: none;
+  background: var(--pizarra-2);
+  border: 1px solid var(--linea);
+  border-radius: 0;
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: 15px;
+  padding: 10px 14px;
+  min-width: 280px;
+}
+.campo--corto select { min-width: 180px; }
+.campo input::placeholder { color: var(--pluma); }
+.campo input:focus-visible,
+.campo select:focus-visible,
+.ver-todos:focus-visible,
+.tabla thead button:focus-visible {
+  outline: 2px solid var(--oro);
+  outline-offset: 3px;
+}
+
+.filtros__conteo {
+  margin: 0 0 10px auto;
+  font-size: 13px;
+  color: var(--pluma);
+}
+
 .tabla--sent { max-width: 880px; }
 
 .celda-sent {
@@ -538,9 +582,49 @@ h2 {
   color: var(--pluma);
 }
 
+.tabla thead button {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 4px 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.tabla thead button:hover { color: var(--tinta); }
+.tabla--historico th[aria-sort='ascending'] button::after { content: ' ↑'; color: var(--oro); }
+.tabla--historico th[aria-sort='descending'] button::after { content: ' ↓'; color: var(--oro); }
+
 .tabla td:nth-child(1) { font-family: var(--display); color: var(--pluma); text-align: right; width: 40px; }
 .tabla td:nth-child(2) { font-weight: 600; }
 .tabla td:nth-child(2) small { display: block; font-weight: 400; font-size: 12px; color: var(--pluma); }
+.tabla--historico { min-width: 720px; }
+.tabla--historico th:nth-child(1),
+.tabla--historico td:nth-child(1) { width: 40px; text-align: right; }
+.tabla--historico th:nth-child(n+4),
+.tabla--historico td:nth-child(n+4) { text-align: right; font-variant-numeric: tabular-nums; }
+.tabla--historico td:nth-child(3),
+.tabla--historico td:nth-child(7) { color: var(--pluma); font-size: 13px; }
+.tabla--historico td:nth-child(4) { font-weight: 600; }
+.tabla tbody tr:hover { background: var(--pizarra-2); }
+.historico__vacio { padding: 20px 0 !important; color: var(--pluma); text-align: center !important; }
+
+.tabla__pie { margin: 20px 0 0; }
+.ver-todos {
+  appearance: none;
+  border: 1px solid var(--oro);
+  background: transparent;
+  color: var(--oro);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 16px;
+  cursor: pointer;
+}
+.ver-todos:hover { background: var(--oro); color: var(--pizarra); }
+.ver-todos[hidden] { display: none; }
 
 .nota-tabla { margin: 30px 0 0; font-size: 13.5px; color: var(--pluma); }
 
@@ -689,6 +773,10 @@ h2 {
   .bloque { padding: 52px 0; }
   .puestos-wrap { gap: 40px; }
   .semana__puestos { grid-template-columns: 1fr; gap: 26px; }
+  .historico__filtros .campo,
+  .historico__filtros .campo input,
+  .historico__filtros .campo select { width: 100%; min-width: 0; }
+  .historico__filtros .filtros__conteo { margin: 0; }
   .planilla__cabecera { display: none; }
   .fila {
     grid-template-columns: 28px minmax(0, 1fr) 80px;

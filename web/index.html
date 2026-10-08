@@ -22,6 +22,7 @@
     <nav class="nav" aria-label="Secciones">
       <a href="#radar">Radar</a>
       <a href="#puestos">Por puesto</a>
+      <a href="#historico">Histórico</a>
       <a href="#sentimiento">Menciones</a>
       <a href="#metodo">Método</a>
     </nav>
@@ -56,6 +57,51 @@
         <p>El borrador del tweet se arma aparte de la planilla: selecciona hasta tres candidatos por grupo y los ordena con el puntaje del modelo. Puede haber menos de nueve si algún grupo tiene menos candidatos disponibles. Acá ves el corte por puesto y, cuando hay datos guardados, hasta tres puntajes de la señal de menciones. El sistema prepara el borrador; la publicación queda fuera de esta etapa.</p>
       </div>
       <div class="puestos-wrap" id="lista-puestos"></div>
+    </div>
+  </section>
+
+  <section class="bloque" id="historico">
+    <div class="grilla">
+      <div class="bloque__cabecera">
+        <h2>Ranking histórico</h2>
+        <p>Consolidado por identidad de jugador: cuenta cuántas veces entró al top 5. La tasa compara esas apariciones con las semanas de ranking registradas para su liga, para reducir el efecto de que algunas ligas aportan más semanas y candidatos.</p>
+      </div>
+
+      <div class="historico__filtros" aria-label="Filtros del ranking histórico">
+        <label class="campo">
+          <span>Buscar jugador o club</span>
+          <input type="search" id="buscar-historico" autocomplete="off" placeholder="Hulk, Cruzeiro, Lanús">
+        </label>
+        <label class="campo campo--corto">
+          <span>Liga principal</span>
+          <select id="filtro-liga-historico">
+            <option value="">Todas</option>
+          </select>
+        </label>
+        <p class="filtros__conteo" id="conteo-historico" aria-live="polite"></p>
+      </div>
+
+      <div class="tabla-wrap">
+        <table class="tabla tabla--historico" id="tabla-historico">
+          <caption class="oculto">Ranking histórico de apariciones en el top 5</caption>
+          <thead>
+            <tr>
+              <th scope="col" data-orden="posicion"><button type="button">#</button></th>
+              <th scope="col" data-orden="nombre"><button type="button">Jugador</button></th>
+              <th scope="col" data-orden="liga"><button type="button">Liga</button></th>
+              <th scope="col" data-orden="apariciones_top5"><button type="button">Top 5</button></th>
+              <th scope="col" data-orden="tasa_top5"><button type="button">Tasa</button></th>
+              <th scope="col" data-orden="mejor_posicion"><button type="button">Mejor</button></th>
+              <th scope="col" data-orden="ultima_semana"><button type="button">Última</button></th>
+            </tr>
+          </thead>
+          <tbody id="cuerpo-historico"></tbody>
+        </table>
+      </div>
+
+      <p class="tabla__pie">
+        <button type="button" id="mostrar-historico" class="ver-todos" hidden></button>
+      </p>
     </div>
   </section>
 
