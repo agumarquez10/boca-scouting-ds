@@ -44,7 +44,7 @@ def combinar_fuentes(yt, prensa):
 
 def sentimiento_jugador(nombre, club, engine=None):
     """Sentimiento ponderado de un jugador; `sentimiento` es None si no hay fuentes."""
-    from nlp_engine import SentimientoEngine
+    from nlp_engine import MOTOR, SentimientoEngine
     from sentimiento_jugadores_prensa import sentimiento_jugador_prensa
     from sentimiento_jugadores_youtube import sentimiento_jugador_youtube
 
@@ -62,6 +62,7 @@ def sentimiento_jugador(nombre, club, engine=None):
         'prensa_valor': prensa.get('valor') if prensa.get('ok') else None,
         'youtube_n_comentarios': yt.get('n_comentarios'),
         'prensa_n_textos': prensa.get('n_textos'),
+        'motor': MOTOR,
     }
 
 

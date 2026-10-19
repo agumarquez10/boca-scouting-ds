@@ -46,6 +46,24 @@ def test_sentimiento_jugador_conserva_cantidades_por_fuente(monkeypatch):
     assert registro['prensa_n_textos'] == 9
 
 
+def test_sentimiento_jugador_registra_la_version_del_motor(monkeypatch):
+    """La cache dice con que motor se midio: asi se puede re-medir despues."""
+    import sentimiento_jugadores_prensa as modulo_prensa
+    import sentimiento_jugadores_youtube as modulo_youtube
+    from nlp_engine import MOTOR
+
+    monkeypatch.setattr(
+        modulo_youtube, 'sentimiento_jugador_youtube',
+        lambda nombre, club, engine=None: {'ok': False, 'valor': 0.0})
+    monkeypatch.setattr(
+        modulo_prensa, 'sentimiento_jugador_prensa',
+        lambda nombre, club, engine=None: {'ok': True, 'valor': 1.0, 'n_textos': 3})
+
+    registro = sentimiento_jugador('Jugador', 'Club', engine=object())
+
+    assert registro['motor'] == MOTOR
+
+
 def test_sentimiento_jugador_permite_respuestas_legacy_sin_conteos(monkeypatch):
     import sentimiento_jugadores_prensa as modulo_prensa
     import sentimiento_jugadores_youtube as modulo_youtube

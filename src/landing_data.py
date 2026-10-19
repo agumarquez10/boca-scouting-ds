@@ -211,6 +211,22 @@ def construir_historico(directorio):
     return filas, por_liga
 
 
+def _leer_evaluacion(modelos):
+    """Metricas del ultimo entrenamiento (`models/evaluacion.json`).
+
+    La pagina las muestra desde aca: asi no hay numeros escritos a mano y
+    reentrenar actualiza la landing sin tocar el HTML.
+    """
+    ruta = os.path.join(modelos, 'evaluacion.json')
+    if not os.path.exists(ruta):
+        return None
+    try:
+        with open(ruta, encoding='utf-8') as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
 def construir_modelo():
     """Metadatos leidos de los artefactos, sin recalcular el modelo."""
     modelos = dir_models()
@@ -227,6 +243,7 @@ def construir_modelo():
         'class_weight': params.get('class_weight'),
         'calibracion': 'Platt (sigmoid) sobre el OOF agrupado por jugador',
         'orden_ranking': 'score crudo del modelo; el calibrador es monotonico y no reordena',
+        'evaluacion': _leer_evaluacion(modelos),
     }
 
 
@@ -290,6 +307,8 @@ def construir_datos(directorio=None, modelos=None):
     semanas = construir_semanas(directorio)
     historico, por_liga = construir_historico(directorio)
     detalle, sentimiento = construir_sentimiento(directorio)
+    from nlp_engine import ESCALA
+    from sentimiento_radar import PESO_GENTE, PESO_MEDIOS
     return {
         'generado': date.today().isoformat(),
         'modelo': construir_modelo(),
@@ -301,6 +320,9 @@ def construir_datos(directorio=None, modelos=None):
             'jugadores': len(sentimiento),
             'acumulado': sentimiento,
             'detalle': detalle,
+            'escala': ESCALA,
+            'peso_medios': PESO_MEDIOS,
+            'peso_gente': PESO_GENTE,
         },
     }
 

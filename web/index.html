@@ -151,7 +151,7 @@
             <li><b>Una ficha más completa</b>: reunimos goles y asistencias de todos los torneos de club de la temporada, no solo de la liga.</li>
             <li><b>Una comparación consistente</b>: el modelo guardado ordena los perfiles con las etiquetas manuales del proyecto; la corrida semanal no vuelve a entrenarlo.</li>
             <li><b>Una lista para explorar</b>: mostramos hasta los cinco primeros del modelo y dejamos aparte los casos que no se pudieron identificar o puntuar.</li>
-            <li><b>Una señal de menciones</b>: combina YouTube (40%) y prensa (60%) cuando ambas fuentes están disponibles. Son pesos provisionales; si solo hay una fuente, se usa esa al 100%.</li>
+            <li><b>Una señal de menciones</b>: combina YouTube (<span data-peso="gente">40</span>%) y prensa (<span data-peso="medios">60</span>%) cuando ambas fuentes están disponibles. Son pesos provisionales; si solo hay una fuente, se usa esa al 100%.</li>
           </ol>
         </article>
 
@@ -164,12 +164,8 @@
 
         <article class="metodo__item">
           <h3>Cómo comprobamos el modelo</h3>
-          <p>Separamos los datos por jugador para que una misma persona no aparezca tanto en el entrenamiento como en la prueba. Además, reservamos las temporadas desde 2023 para comprobar cómo funciona con jugadores más recientes.</p>
-          <dl class="metricas">
-            <div><dt>Error Brier (menor es mejor)</dt><dd><s>0,1716</s><b>0,1595</b></dd></div>
-            <div><dt>Desajuste de calibración (5 grupos)</dt><dd><s>0,1071</s><b>0,0647</b></dd></div>
-            <div><dt>Prueba con temporadas</dt><dd>desde 2023</dd></div>
-          </dl>
+          <p>Separamos los datos por jugador para que una misma persona no aparezca tanto en el entrenamiento como en la prueba. Además, reservamos para la prueba a los jugadores cuya última temporada registrada es 2023 o posterior: nunca los vimos en el entrenamiento.</p>
+          <dl class="metricas" id="metricas"></dl>
           <p class="metodo__pie">Ajustamos los porcentajes con una técnica llamada Platt, usando predicciones que el modelo no vio durante su entrenamiento. En la prueba temporal mejoraron ambos indicadores y el orden del ranking se conserva. Estas métricas corresponden al conjunto de prueba; no validan las probabilidades para los jugadores de los equipos de la fecha, que todavía no tienen etiquetas.</p>
         </article>
       </div>

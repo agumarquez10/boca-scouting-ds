@@ -1,4 +1,6 @@
 import logging
+import os
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -6,12 +8,20 @@ import pytest
 import corrida_semanal
 from corrida_semanal import (
     EXIT_OK,
+    EXIT_PARCIAL,
     EXIT_SIN_SALIDA,
     cumple_gate,
     corrida,
 )
 from scouting_pipeline import generar_ranking_semanal
 from sentimiento_radar import _guardar_cache
+
+
+def _corrida(tmp_path, **kwargs):
+    """Corrida con log y datos en el tmp: los tests no tocan outputs/ ni data/."""
+    kwargs.setdefault('directorio_log', str(tmp_path))
+    kwargs.setdefault('directorio_datos', str(tmp_path))
+    return corrida(**kwargs)
 
 
 LIGAS = [{'nombre': 'Argentina', 'fotmob_id': 112},
@@ -157,69 +167,69 @@ def _fake_radar(detalle, n_ligas, ranking=None):
 INICIO = pd.Timestamp('2026-09-28', tz='UTC')
 
 
-def test_corrida_sin_gate_no_escribe(monkeypatch):
+def test_corrida_sin_gate_no_escribe(monkeypatch, tmp_path):
     monkeypatch.setattr(corrida_semanal, '_radar', _fake_radar({}, 1))
     llamado = {'guardar': 0, 'borrador': False, 'landing': False}
     monkeypatch.setattr(corrida_semanal, 'guardar_resultados',
-                        lambda *a: llamado.update(guardar=llamado['guardar'] + 1))
+                        lambda *a, **k: llamado.update(guardar=llamado['guardar'] + 1))
     monkeypatch.setattr(corrida_semanal, 'generar_borrador',
                         lambda *a, **k: llamado.update(borrador=True))
     monkeypatch.setattr(corrida_semanal, '_refrescar_landing',
                         lambda log: llamado.update(landing=True))
 
-    assert corrida(min_ligas=3) == EXIT_SIN_SALIDA
+    assert _corrida(tmp_path, min_ligas=3) == EXIT_SIN_SALIDA
     assert llamado == {'guardar': 0, 'borrador': False, 'landing': False}
 
 
-def test_corrida_con_gate_hace_todo(monkeypatch):
+def test_corrida_con_gate_hace_todo(monkeypatch, tmp_path):
     monkeypatch.setattr(corrida_semanal, '_radar', _fake_radar({}, 3))
     llamado = {'guardar': 0, 'borrador': 0, 'landing': False}
     monkeypatch.setattr(corrida_semanal, 'guardar_resultados',
-                        lambda *a: (llamado.update(guardar=llamado['guardar'] + 1),
-                                    ('ranking.csv', 'no_resueltos.csv'))[1])
+                        lambda *a, **k: (llamado.update(guardar=llamado['guardar'] + 1),
+                                         ('ranking.csv', 'no_resueltos.csv'))[1])
     monkeypatch.setattr(corrida_semanal, 'generar_borrador', lambda *a, **k: (
         llamado.update(borrador=llamado['borrador'] + 1),
         {'texto': 'x' * 10, 'con_datos': 1, 'jugadores': [('A', 'B')]})[1])
     monkeypatch.setattr(corrida_semanal, '_refrescar_landing',
                         lambda log: llamado.update(landing=True))
 
-    assert corrida(min_ligas=3) == EXIT_OK
+    assert _corrida(tmp_path, min_ligas=3) == EXIT_OK
     assert llamado == {'guardar': 1, 'borrador': 1, 'landing': True}
 
 
-def test_corrida_ranking_vacio_da_sin_salida(monkeypatch):
+def test_corrida_ranking_vacio_da_sin_salida(monkeypatch, tmp_path):
     monkeypatch.setattr(corrida_semanal, '_radar',
                         _fake_radar({}, 3, ranking=pd.DataFrame()))
-    assert corrida(min_ligas=3) == EXIT_SIN_SALIDA
+    assert _corrida(tmp_path, min_ligas=3) == EXIT_SIN_SALIDA
 
 
-def test_corrida_forzar_ignora_el_gate(monkeypatch):
+def test_corrida_forzar_ignora_el_gate(monkeypatch, tmp_path):
     monkeypatch.setattr(corrida_semanal, '_radar', _fake_radar({}, 1))
     monkeypatch.setattr(corrida_semanal, 'guardar_resultados',
-                        lambda *a: ('ranking.csv', 'no_resueltos.csv'))
+                        lambda *a, **k: ('ranking.csv', 'no_resueltos.csv'))
     monkeypatch.setattr(corrida_semanal, 'generar_borrador', lambda *a, **k: {
         'texto': 'x', 'con_datos': 0, 'jugadores': []})
     monkeypatch.setattr(corrida_semanal, '_refrescar_landing', lambda log: None)
-    assert corrida(min_ligas=3, forzar=True) == EXIT_OK
+    assert _corrida(tmp_path, min_ligas=3, forzar=True) == EXIT_OK
 
 
-def test_corrida_sin_sentimiento_no_toca_la_tweet(monkeypatch):
+def test_corrida_sin_sentimiento_no_toca_la_tweet(monkeypatch, tmp_path):
     monkeypatch.setattr(corrida_semanal, '_radar', _fake_radar({}, 3))
     monkeypatch.setattr(corrida_semanal, 'guardar_resultados',
-                        lambda *a: ('ranking.csv', 'no_resueltos.csv'))
+                        lambda *a, **k: ('ranking.csv', 'no_resueltos.csv'))
 
     def no_deberia(*a, **k):
         raise AssertionError('no hay que generar el borrador sin sentimiento')
 
     monkeypatch.setattr(corrida_semanal, 'generar_borrador', no_deberia)
     monkeypatch.setattr(corrida_semanal, '_refrescar_landing', no_deberia)
-    assert corrida(min_ligas=3, con_sentimiento=False) == EXIT_SIN_SALIDA
+    assert _corrida(tmp_path, min_ligas=3, con_sentimiento=False) == EXIT_PARCIAL
 
 
-def test_corrida_falla_si_la_landing_no_se_refresca(monkeypatch):
+def test_corrida_falla_si_la_landing_no_se_refresca(monkeypatch, tmp_path):
     monkeypatch.setattr(corrida_semanal, '_radar', _fake_radar({}, 3))
     monkeypatch.setattr(corrida_semanal, 'guardar_resultados',
-                        lambda *a: ('ranking.csv', 'no_resueltos.csv'))
+                        lambda *a, **k: ('ranking.csv', 'no_resueltos.csv'))
     monkeypatch.setattr(corrida_semanal, 'generar_borrador', lambda *a, **k: {
         'texto': 'x', 'con_datos': 0, 'jugadores': []})
 
@@ -227,7 +237,7 @@ def test_corrida_falla_si_la_landing_no_se_refresca(monkeypatch):
         raise OSError('data.js en uso')
 
     monkeypatch.setattr(corrida_semanal, '_refrescar_landing', landing_rota)
-    assert corrida(min_ligas=3) == corrida_semanal.EXIT_ERROR
+    assert _corrida(tmp_path, min_ligas=3) == corrida_semanal.EXIT_ERROR
 
 
 def test_radar_cierra_el_cliente_y_no_guarda(monkeypatch, tmp_path):
@@ -258,12 +268,96 @@ def test_radar_cierra_el_cliente_y_no_guarda(monkeypatch, tmp_path):
     assert not list(tmp_path.glob('*.csv'))
 
 
-def test_logger_crea_logs_y_limpia_handlers():
-    log = corrida_semanal._logger()
+def test_logger_crea_logs_y_limpia_handlers(tmp_path):
+    log = corrida_semanal._logger(directorio=str(tmp_path))
     assert log.handlers
     assert logging.getLogger('corrida_semanal') is log
-    corrida_semanal._logger()
+    corrida_semanal._logger(directorio=str(tmp_path))
     assert len(logging.getLogger('corrida_semanal').handlers) == len(log.handlers)
+    assert list(tmp_path.glob('*.log'))
+
+
+def test_el_log_de_los_tests_no_toca_outputs(monkeypatch, tmp_path):
+    """Los tests escriben el log en el tmp, no en outputs/logs."""
+    log_real = Path(corrida_semanal.dir_outputs()) / 'logs' / 'corrida_semanal.log'
+    antes = log_real.read_bytes() if log_real.exists() else None
+
+    monkeypatch.setattr(corrida_semanal, '_radar', _fake_radar({}, 1))
+    _corrida(tmp_path, min_ligas=3)
+
+    assert list(tmp_path.glob('*.log'))
+    despues = log_real.read_bytes() if log_real.exists() else None
+    assert despues == antes, 'el test escribio en el log de produccion'
+
+
+def test_marcador_guarda_y_relee_el_estado(tmp_path):
+    ruta = corrida_semanal.guardar_marcador(
+        '2026-W42', corrida_semanal.ESTADO_COMPLETA,
+        {'n_ligas_con_totw': 3, 'jugadores': 12}, directorio=str(tmp_path))
+    assert os.path.exists(ruta)
+    marcador = corrida_semanal.leer_marcador('2026-W42', directorio=str(tmp_path))
+    assert marcador['estado'] == corrida_semanal.ESTADO_COMPLETA
+    assert marcador['n_ligas_con_totw'] == 3
+    assert marcador['generado']
+    assert corrida_semanal.leer_marcador('2026-W41', directorio=str(tmp_path)) is None
+
+
+def test_semana_completa_no_se_reprocesa(monkeypatch, tmp_path):
+    """Una semana ya completa no vuelve a pegarle a FotMob."""
+    llamado = {'radar': 0}
+
+    def radar_que_no_deberia_llamarse(detalle):
+        llamado['radar'] += 1
+        return pd.DataFrame(), pd.DataFrame(), INICIO
+
+    monkeypatch.setattr(corrida_semanal, '_radar', radar_que_no_deberia_llamarse)
+    monkeypatch.setattr(corrida_semanal, '_semana_del_bloque', lambda: '2026-W42')
+    corrida_semanal.guardar_marcador(
+        '2026-W42', corrida_semanal.ESTADO_COMPLETA,
+        {'n_ligas_con_totw': 3}, directorio=str(tmp_path))
+
+    assert _corrida(tmp_path, min_ligas=3) == EXIT_OK
+    assert llamado['radar'] == 0
+
+
+def test_semana_con_ranking_retoma_sin_consultar_fotmob(monkeypatch, tmp_path):
+    """Si el ranking ya esta escrito, la corrida retoma sin tocar FotMob."""
+    RANGING.to_csv(tmp_path / 'ranking_jugadores_fecha_2026-W42.csv',
+                   index=False, encoding='utf-8-sig')
+
+    llamado = {'radar': 0}
+
+    def radar_que_no_deberia_llamarse(detalle):
+        llamado['radar'] += 1
+        return pd.DataFrame(), pd.DataFrame(), INICIO
+
+    monkeypatch.setattr(corrida_semanal, '_radar', radar_que_no_deberia_llamarse)
+    monkeypatch.setattr(corrida_semanal, '_semana_del_bloque', lambda: '2026-W42')
+    corrida_semanal.guardar_marcador(
+        '2026-W42', corrida_semanal.ESTADO_RANKING,
+        {'n_ligas_con_totw': 3, 'inicio': '2026-10-12', 'fin': '2026-10-19'},
+        directorio=str(tmp_path))
+    monkeypatch.setattr(corrida_semanal, 'generar_borrador', lambda *a, **k: {
+        'texto': 'x', 'con_datos': 0, 'jugadores': []})
+    monkeypatch.setattr(corrida_semanal, '_refrescar_landing', lambda log: None)
+
+    assert _corrida(tmp_path, min_ligas=3) == EXIT_OK
+    assert llamado['radar'] == 0
+
+
+def test_forzar_ignora_el_marcador_de_semana_completa(monkeypatch, tmp_path):
+    monkeypatch.setattr(corrida_semanal, '_radar', _fake_radar({}, 3))
+    monkeypatch.setattr(corrida_semanal, 'guardar_resultados',
+                        lambda *a, **k: ('ranking.csv', 'no_resueltos.csv'))
+    monkeypatch.setattr(corrida_semanal, 'generar_borrador', lambda *a, **k: {
+        'texto': 'x', 'con_datos': 0, 'jugadores': []})
+    monkeypatch.setattr(corrida_semanal, '_refrescar_landing', lambda log: None)
+    monkeypatch.setattr(corrida_semanal, '_semana_del_bloque', lambda: '2026-W42')
+    corrida_semanal.guardar_marcador(
+        '2026-W42', corrida_semanal.ESTADO_COMPLETA,
+        {'n_ligas_con_totw': 3}, directorio=str(tmp_path))
+
+    assert _corrida(tmp_path, min_ligas=3, forzar=True) == EXIT_OK
 
 
 def test_buscar_videos_devuelve_vacio_si_falla():

@@ -1,6 +1,8 @@
+import json
 import os
 import sys
 import warnings
+from datetime import datetime, timezone
 
 import joblib
 import matplotlib
@@ -116,7 +118,10 @@ def entrenar_modelo_principal(X_train, X_test, y_train, y_test, features, df, te
     print('=== MODELO PRINCIPAL: LogisticRegression L1 (saga) ===')
     print(f'Mejor C: {mejor_c} | AUPRC CV latest-player: {cv_ap:.3f} ± {cv_sd:.3f}')
     print(f'AUC-ROC test: {auc:.3f} | AUPRC test (filas): {ap:.3f}')
-    print(classification_report(y_test, y_pred, target_names=['No encaja', 'ADN Boca']))
+    reporte = classification_report(y_test, y_pred, target_names=['No encaja', 'ADN Boca'],
+                                    output_dict=True, zero_division=0)
+    print(classification_report(y_test, y_pred, target_names=['No encaja', 'ADN Boca'],
+                                zero_division=0))
 
     cm = confusion_matrix(y_test, y_pred)
     fig, ax = plt.subplots(figsize=(6, 5))
@@ -158,11 +163,47 @@ def entrenar_modelo_principal(X_train, X_test, y_train, y_test, features, df, te
     # class_weight en P(etiqueta manual | features) bajo el train.
     calibrador = ajustar_platt(oof, y_train.to_numpy(), reporte='OOF train por jugador')
     prob_cal = aplicar_platt(y_prob, calibrador)
+    brier_sin = brier(y_test, y_prob)
+    brier_con = brier(y_test, prob_cal)
+    ece_sin = ece(y_test, y_prob, bins=5)
+    ece_con = ece(y_test, prob_cal, bins=5)
     print(f'Platt: a={calibrador["a"]:.4f} b={calibrador["b"]:.4f} | '
-          f'Brier test {brier(y_test, y_prob):.4f} -> {brier(y_test, prob_cal):.4f} | '
-          f'ECE(5) test {ece(y_test, y_prob, bins=5):.4f} -> {ece(y_test, prob_cal, bins=5):.4f}')
+          f'Brier test {brier_sin:.4f} -> {brier_con:.4f} | '
+          f'ECE(5) test {ece_sin:.4f} -> {ece_con:.4f}')
 
-    return modelo, scaler, y_pred, y_prob, oof, auc, calibrador
+    metricas = {
+        'cv_auprc': round(cv_ap, 4),
+        'cv_auprc_std': round(cv_sd, 4),
+        'cv_n_splits': 5,
+        'cv_agrupacion': 'GroupKFold por jugador (n_splits=5)',
+        'cv_criterio': 'AUPRC sobre el ultimo registro de cada jugador de cada fold',
+        'C': mejor_c,
+        'test_auc_roc': round(auc, 4),
+        'test_auprc_filas': round(ap, 4),
+        'brier_sin_calibrar': round(brier_sin, 4),
+        'brier_calibrado': round(brier_con, 4),
+        'ece_sin_calibrar': round(ece_sin, 4),
+        'ece_calibrado': round(ece_con, 4),
+        'ece_bins': 5,
+        'platt_a': round(calibrador['a'], 4),
+        'platt_b': round(calibrador['b'], 4),
+        'por_clase': {
+            'no_encaja': {
+                'precision': round(reporte['No encaja']['precision'], 4),
+                'recall': round(reporte['No encaja']['recall'], 4),
+                'f1': round(reporte['No encaja']['f1-score'], 4),
+                'soporte': int(reporte['No encaja']['support']),
+            },
+            'adn_boca': {
+                'precision': round(reporte['ADN Boca']['precision'], 4),
+                'recall': round(reporte['ADN Boca']['recall'], 4),
+                'f1': round(reporte['ADN Boca']['f1-score'], 4),
+                'soporte': int(reporte['ADN Boca']['support']),
+            },
+        },
+    }
+
+    return modelo, scaler, y_pred, y_prob, oof, auc, calibrador, metricas
 
 
 def guardar_scouting(df, features, test_mask, oof, y_prob, calibrador):
@@ -219,6 +260,66 @@ def entrenar_modelo_bosque(X_train, X_test, y_train, y_test, grupos):
     return modelo
 
 
+def guardar_evaluacion(metricas, df, test_mask, features, calibrador, modelo_dir=None):
+    """Persiste las metricas del entrenamiento en `models/evaluacion.json`.
+
+    La landing lee este archivo: asi las metricas que publica salen del
+    entrenamiento real y no de numeros escritos a mano en la pagina.
+    """
+    modelo_dir = modelo_dir or MODEL_DIR
+    df_test = df.loc[test_mask]
+    evaluacion = {
+        'generado': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+        'modelo': {
+            'tipo': 'LogisticRegression',
+            'penalty': 'l1',
+            'solver': 'saga',
+            'C': metricas['C'],
+            'class_weight': 'balanced',
+            'features': list(features),
+        },
+        'split': {
+            'regla': 'los jugadores cuya ultima temporada es >= 2023 van a test; '
+                     'el resto entrena. El split es por jugador, nunca por fila.',
+            'umbral_test': UMBRAL_TEST,
+            'n_train_filas': int((~test_mask).sum()),
+            'n_train_jugadores': int(df.loc[~test_mask, 'nombre'].nunique()),
+            'n_test_filas': int(test_mask.sum()),
+            'n_test_jugadores': int(df_test['nombre'].nunique()),
+            'temporadas_test': sorted(int(t) for t in df_test['temporada'].unique()),
+            'n_test_filas_temporada_umbral': int((df_test['temporada'] >= UMBRAL_TEST).sum()),
+        },
+        'cv': {
+            'auprc': metricas['cv_auprc'],
+            'auprc_std': metricas['cv_auprc_std'],
+            'n_splits': metricas['cv_n_splits'],
+            'agrupacion': metricas['cv_agrupacion'],
+            'criterio': metricas['cv_criterio'],
+        },
+        'test': {
+            'auc_roc': metricas['test_auc_roc'],
+            'auprc_filas': metricas['test_auprc_filas'],
+        },
+        'calibracion': {
+            'metodo': calibrador.get('metodo', 'platt_sigmoid'),
+            'a': metricas['platt_a'],
+            'b': metricas['platt_b'],
+            'brier_sin_calibrar': metricas['brier_sin_calibrar'],
+            'brier_calibrado': metricas['brier_calibrado'],
+            'ece_sin_calibrar': metricas['ece_sin_calibrar'],
+            'ece_calibrado': metricas['ece_calibrado'],
+            'ece_bins': metricas['ece_bins'],
+        },
+        'por_clase': metricas['por_clase'],
+    }
+    ruta = os.path.join(modelo_dir, 'evaluacion.json')
+    os.makedirs(modelo_dir, exist_ok=True)
+    with open(ruta, 'w', encoding='utf-8') as f:
+        json.dump(evaluacion, f, ensure_ascii=False, indent=2)
+    print(f'\nmodels/evaluacion.json guardado ({ruta})')
+    return ruta
+
+
 def main():
     df = cargar_datos()
     encoder = PositionEncoder(POS_COLUMNS)
@@ -235,10 +336,12 @@ def main():
     print(f'Train: {len(X_train)} registros, {df[train_mask]["nombre"].nunique()} jugadores')
     print(f'Test:  {len(X_test)} registros, {df[test_mask]["nombre"].nunique()} jugadores')
 
-    modelo, scaler, y_pred, y_prob, oof, auc, calibrador = entrenar_modelo_principal(
+    (modelo, scaler, y_pred, y_prob, oof, auc,
+     calibrador, metricas) = entrenar_modelo_principal(
         X_train, X_test, y_train, y_test, features, df, test_mask, grupos)
 
     guardar_scouting(df, features, test_mask, oof, y_prob, calibrador)
+    guardar_evaluacion(metricas, df, test_mask, features, calibrador)
 
     modelo_arbol = entrenar_modelo_arbol(X_train, X_test, y_train, y_test, grupos)
     modelo_bosque = entrenar_modelo_bosque(X_train, X_test, y_train, y_test, grupos)

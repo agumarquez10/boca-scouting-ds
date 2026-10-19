@@ -8,13 +8,23 @@ Dos componentes:
   2. BERT espanol (pysentimiento/robertuito-sentiment-analysis) para jerga
      de redes/hinchada que el lexico no capta.
 
-El resultado final es un promedio ponderado de ambas secciones normalizado a
-[-50, +50]. La carga del BERT es perezosa (solo cuando se pide) para no frenar
-pipelines que solo usan VADER.
+El resultado final es un promedio ponderado de los componentes ACTIVOS
+normalizado a [-50, +50]. El ponderado se renormaliza sobre los componentes
+que estan encendidos: con BERT apagado (el modo de produccion) la escala
+real sigue siendo +-50 y no +-27.5. La carga del BERT es perezosa (solo
+cuando se pide) para no frenar pipelines que solo usan VADER.
 """
 
-import os
+import re
 import unicodedata
+
+ESCALA = 50
+PESO_VADER = 0.55
+PESO_BERT = 0.45
+# Version del motor: queda en la cache de sentimiento para poder distinguir las
+# mediciones hechas con el motor viejo (techo 27.5, lexico por substring) de las
+# nuevas (escala +-50, lexico por token).
+MOTOR = 'vader_lexico_2'
 
 # --- Lexico espanol propio (terminos de hincha de futbol) ---
 LEXICO_HINCHADA = {
@@ -43,33 +53,89 @@ LEXICO_HINCHADA = {
 
 
 def _normalizar(texto):
-    texto = unicodedata.normalize('NFKD', texto)
+    texto = unicodedata.normalize('NFKD', str(texto))
     texto = ''.join(c for c in texto if not unicodedata.combining(c))
     return texto.lower()
 
 
+def _tokens(texto):
+    """Palabras del texto normalizado.
+
+    El lexico se matchea por palabra completa, no por substring: asi 'mufa'
+    no dispara dentro de 'mufado' y el texto no cuenta dos veces el mismo
+    termino.
+    """
+    return re.findall(r"[a-z0-9']+", _normalizar(texto))
+
+
+def _indice_lexico():
+    """Indexa el lexico por token normalizado.
+
+    Las claves se normalizan al cargar ('caño' -> 'cano'), asi que las claves
+    con tilde pueden coincidir contra el texto normalizado. Las variantes
+    duplicadas ('ídolo'/'idolo') colapsan en una sola entrada con su peso.
+    """
+    unigramas, frases = {}, {}
+    for termino, peso in LEXICO_HINCHADA.items():
+        palabras = _tokens(termino)
+        if not palabras:
+            continue
+        if len(palabras) == 1:
+            unigramas[palabras[0]] = max(unigramas.get(palabras[0], peso), peso)
+        else:
+            clave = ' '.join(palabras)
+            frases[clave] = max(frases.get(clave, peso), peso)
+    return unigramas, [(k.split(), v) for k, v in frases.items()]
+
+
+_LEXICO_UNIGRAMAS, _LEXICO_FRASES = _indice_lexico()
+
+
 def clasificar_vader(texto):
     from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-    analyzer = SentimentIntensityAnalyzer()
-    comp = analyzer.polarity_scores(texto)['compound']
-    return comp
+    global _ANALYZER
+    if _ANALYZER is None:
+        _ANALYZER = SentimentIntensityAnalyzer()
+    return _ANALYZER.polarity_scores(texto)['compound']
+
+
+_ANALYZER = None
+
+
+def _ajuste_lexico(tokens):
+    """Suma de los pesos de los terminos del lexico presentes en el texto."""
+    delta = 0.0
+    for token in tokens:
+        peso = _LEXICO_UNIGRAMAS.get(token)
+        if peso is not None:
+            delta += peso * 0.08
+    n = len(tokens)
+    for palabras, peso in _LEXICO_FRASES:
+        largo = len(palabras)
+        for i in range(n - largo + 1):
+            if tokens[i:i + largo] == palabras:
+                delta += peso * 0.08
+                break
+    return delta
 
 
 def ajustar_lexico_hinchada(texto, comp):
     """Corrige el compound segun terminos propios del lexico de hinchada."""
-    norm = _normalizar(texto)
-    delta = 0.0
-    for termino, peso in LEXICO_HINCHADA.items():
-        if termino in norm:
-            delta += peso * 0.08
+    delta = _ajuste_lexico(_tokens(texto))
     comp = max(-1.0, min(1.0, comp + delta * 0.3))
     return comp
 
 
 class SentimientoEngine:
-    """Motor combinado VADER + BERT espanol -> -50 a +50."""
+    """Motor combinado VADER + BERT espanol -> -50 a +50.
 
-    def __init__(self, usar_bert=True, bert_model='pysentimiento/robertuito-sentiment-analysis'):
+    `usar_bert` queda apagado por defecto: la corrida semanal corre sin BERT
+    (es VADER + lexico propio) y no debe descargar el modelo de ~500MB ni
+    multiplicar la latencia de CPU. El ponderado se renormaliza sobre los
+    componentes activos, asi que la escala es +-50 en los dos modos.
+    """
+
+    def __init__(self, usar_bert=False, bert_model='pysentimiento/robertuito-sentiment-analysis'):
         self.usar_bert = usar_bert
         self.bert_model = bert_model
         self._pipe = None
@@ -111,8 +177,14 @@ class SentimientoEngine:
 
         bert_norm = self.bert_score(texto)
 
-        mezcla = 0.55 * vader_norm + 0.45 * bert_norm
-        return mezcla * 50.0
+        # Se renormaliza sobre los componentes encendidos: con BERT apagado el
+        # ponderado es 100% VADER y el techo real sigue siendo +-50.
+        aportes = [(PESO_VADER, vader_norm)]
+        if self.usar_bert:
+            aportes.append((PESO_BERT, bert_norm))
+        total = sum(peso for peso, _ in aportes)
+        mezcla = sum(peso * valor for peso, valor in aportes) / total
+        return mezcla * ESCALA
 
     def puntuar_lote(self, textos):
         return [self.puntuar(t) for t in textos]

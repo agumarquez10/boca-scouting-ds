@@ -50,9 +50,13 @@ la semana del TOTW; la página solo lee los datos guardados.
 La mezcla actual asigna 60% a prensa y 40% a YouTube cuando hay ambas fuentes;
 es una heurística provisional, no validada contra etiquetas de sentimiento. Si
 falta una fuente se usa la disponible al 100%, y si faltan ambas no se asigna
-puntaje. Las nuevas mediciones conservan el número de comentarios de YouTube y
-de textos RSS de prensa (títulos y descripciones; no artículos únicos) en la
-caché y el histórico. Las cachés anteriores no se vuelven a consultar
+puntaje. La escala publicada es **−50 a +50** y la página la toma de
+`nlp_engine.ESCALA` (no de un literal): el motor renormaliza el ponderado sobre
+los componentes encendidos, así que con BERT apagado el techo real sigue siendo
+±50 y no ±27.5. Las nuevas mediciones conservan el número de comentarios de
+YouTube y de textos RSS de prensa (títulos y descripciones; no artículos únicos)
+en la caché y el histórico, y agregan la columna `motor` con la versión del
+motor usada (`vader_lexico_2`). Las cachés anteriores no se vuelven a consultar
 automáticamente y no contienen estos conteos. Ninguno de los conteos es una
 medida de calidad.
 
@@ -71,7 +75,8 @@ se usan para el nuevo radar TOTW.
 ## Cómo correr
 
 ```powershell
-# 1. Entrenar / re-entrenar el modelo (genera models/*.pkl y scouting_resultado_historico.csv)
+# 1. Entrenar / re-entrenar el modelo (genera models/*.pkl, models/evaluacion.json
+#    y scouting_resultado_historico.csv)
 python src/train_model.py
 
 # 2. Radar de equipos de la fecha (semana ISO completa anterior, UTC)
@@ -172,6 +177,12 @@ ranking sigue ordenándose por el score bruto: Platt con pendiente `a>0` es
 monotónico y no cambia el orden. La columna aparece en
 `scouting_resultado_historico.csv` y en el próximo CSV semanal.
 
+`train_model.py` deja las métricas del entrenamiento en `models/evaluacion.json`
+(Brier/ECE antes y después de Platt, AUC-ROC y AUPRC de test, AUPRC del CV con
+GroupKFold, el detalle del split y las métricas por clase). La página del radar
+las lee de ahí: no hay números escritos a mano en el HTML, así que reentrenar
+actualiza la landing sin tocar la página.
+
 ## Datos
 
 | Archivo | Descripción |
@@ -182,8 +193,10 @@ monotónico y no cambia el orden. La columna aparece en
 | `data/ranking_jugadores_fecha_YYYY-Www.csv` | Ranking semanal nuevo, una fila por jugador, con score y captura de stats |
 | `data/jugadores_fecha_no_resueltos_YYYY-Www.csv` | TOTW sin cruce/estadísticas completas; no se puntúan |
 | `data/ranking_historico_acumulado.csv` | Apariciones en el top 5 agregadas por jugador sobre todos los rankings semanales |
-| `data/sentimiento_radar_YYYY-Www.csv` | Sentimiento por jugador del tweet (YouTube + prensa) con caché semanal |
+| `data/sentimiento_radar_YYYY-Www.csv` | Sentimiento por jugador del tweet (YouTube + prensa) con caché semanal y columna `motor` |
 | `data/sentimiento_historico.csv` | Sentimiento del corte por puesto en todas las semanas registradas |
+| `data/estado/corrida_YYYY-Www.json` | Marcador de la corrida de la semana: qué se llegó a escribir |
+| `models/evaluacion.json` | Métricas del último entrenamiento; las publica la landing |
 | `web/data.js` | Datos de la página del radar, generados por `src/landing_data.py` |
 | `data/scouting_resultado.csv` | Ranking antiguo de mercado; no lo genera el radar semanal |
 | `data/sentimiento_hinchada.csv` | Comentarios + VADER compound + clasificación |
@@ -209,9 +222,14 @@ Credenciales en `secrets/.env` (no versionado; ver `.env.example`).
 - [x] Sentimiento por jugador del TOTW (YouTube + prensa multi-medio, prioridad a medios) para el top 3 del tweet
 
 ### Sentimiento (límites)
-VADER está entrenado en inglés; se aplica un lexicón mínimo español-futbolero
-en `src/sentimiento_hinchada.ipynb`. Mejorar con un modelo de español cuando
-haya datos reales.
+VADER está entrenado en inglés: su aporte en español es limitado y el peso real
+lo carga el lexicón fútbolero de `src/nlp_engine.py`, que se matchea por palabra
+completa (no por substring) y con las claves normalizadas sin tildes. El motor
+combina VADER + ese lexicón y renormaliza sobre los componentes encendidos, así
+que la escala va de −50 a +50 con BERT apagado. El BERT en español
+(`pysentimiento/robertuito-sentiment-analysis`) está disponible pero apagado por
+default: la corrida semanal no lo descarga. Mejorar con un modelo de español
+cuando haya datos reales.
 
 ## Corrida semanal (`src/corrida_semanal.py`)
 
@@ -228,13 +246,22 @@ misma semana, así que conviene correrlo más de una vez por semana.
 ```powershell
 python src/corrida_semanal.py                    # corrida normal
 python src/corrida_semanal.py --min-ligas 4       # gate más exigente
-python src/corrida_semanal.py --forzar            # ignora el gate
+python src/corrida_semanal.py --forzar            # ignora el gate y el marcador
 python src/corrida_semanal.py --sin-sentimiento   # solo ranking, no consume cuota de YouTube
+python src/corrida_semanal.py --log-dir logs      # otro destino para el log
 ```
 
-Códigos de salida: `0` corrida completa · `2` no se produjo salida (gate no cumplido o
-sin jugadores puntuables) · `1` error inesperado. Log rotativo en
-`outputs/logs/corrida_semanal.log`.
+Códigos de salida: `0` corrida completa · `2` no se produjo salida (gate no
+cumplido o sin jugadores puntuables) · `3` corrida parcial (el ranking se
+escribió pero el tweet no, por `--sin-sentimiento`) · `1` error inesperado. Log
+rotativo en `outputs/logs/corrida_semanal.log`.
+
+La corrida es **idempotente**: deja un marcador en
+`data/estado/corrida_YYYY-Www.json`. Si la semana ya está marcada como
+`completa` no vuelve a pegarle a FotMob (sale con `0` sin hacer nada); si está
+en `ranking` retoma desde el tweet sin volver a consultar la fuente. Así una
+tarea programada diaria no re-consume cuota ni pisa una semana ya publicada.
+`--forzar` ignora el marcador.
 
 ## Automatización semanal (Windows Task Scheduler)
 

@@ -377,9 +377,92 @@
 
   var TOP_SENTIMIENTO = 5;
 
+  var dec4 = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+  var dec3 = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+
+  function itemMetrica(termino, antes, despues) {
+    var div = el('div');
+    div.appendChild(el('dt', null, termino));
+    var dd = el('dd');
+    if (antes !== null && antes !== undefined) {
+      dd.appendChild(el('s', null, dec4.format(antes)));
+    }
+    dd.appendChild(el('b', null, despues));
+    div.appendChild(dd);
+    return div;
+  }
+
+  function pintarMetricas() {
+    var caja = document.getElementById('metricas');
+    if (!caja) return;
+    caja.textContent = '';
+    var ev = (DATOS.modelo || {}).evaluacion;
+    if (!ev) {
+      var aviso = el('div');
+      aviso.appendChild(el('dt', null, 'Métricas'));
+      aviso.appendChild(el('dd', null, 'sin datos del último entrenamiento'));
+      caja.appendChild(aviso);
+      return;
+    }
+    var cal = ev.calibracion || {};
+    var test = ev.test || {};
+    var split = ev.split || {};
+
+    if (cal.brier_sin_calibrar !== undefined) {
+      caja.appendChild(itemMetrica('Error Brier (menor es mejor)',
+        cal.brier_sin_calibrar, dec4.format(cal.brier_calibrado)));
+    }
+    if (cal.ece_sin_calibrar !== undefined) {
+      caja.appendChild(itemMetrica('Desajuste de calibración (' + (cal.ece_bins || 5) + ' grupos)',
+        cal.ece_sin_calibrar, dec4.format(cal.ece_calibrado)));
+    }
+    if (test.auc_roc !== undefined) {
+      caja.appendChild(itemMetrica('AUC-ROC (prueba)', null, dec3.format(test.auc_roc)));
+    }
+    if (test.auprc_filas !== undefined) {
+      caja.appendChild(itemMetrica('AUPRC (prueba, filas)', null, dec3.format(test.auprc_filas)));
+    }
+    if (split.n_test_jugadores !== undefined) {
+      var dd = el('div');
+      dd.appendChild(el('dt', null, 'Prueba'));
+      dd.appendChild(el('dd', null, split.n_test_jugadores + ' jugadores no vistos'));
+      caja.appendChild(dd);
+    }
+    if (split.n_test_filas !== undefined) {
+      var ddFilas = el('div');
+      ddFilas.appendChild(el('dt', null, 'Filas de prueba'));
+      var textoFilas = split.n_test_filas + ' registros';
+      if (split.n_test_filas_temporada_umbral !== undefined) {
+        textoFilas += ' (de ' + split.n_test_filas_temporada_umbral +
+          ' en temporadas ' + (split.umbral_test || 2023) + ' o posteriores)';
+      }
+      ddFilas.appendChild(el('dd', null, textoFilas));
+      caja.appendChild(ddFilas);
+    }
+  }
+
+  function pintarPesos() {
+    var sent = DATOS.sentimiento || {};
+    var medios = sent.peso_medios;
+    var gente = sent.peso_gente;
+    var nodos = document.querySelectorAll('[data-peso]');
+    Array.prototype.forEach.call(nodos, function (nodo) {
+      var valor = nodo.dataset.peso === 'medios' ? medios : gente;
+      if (valor !== null && valor !== undefined) {
+        nodo.textContent = String(Math.round(valor * 100));
+      }
+    });
+  }
+
+  function escalaSentimiento() {
+    var escala = (DATOS.sentimiento || {}).escala;
+    return escala === null || escala === undefined ? 50 : escala;
+  }
+
   function barraSentimiento(valor, tope) {
     var caja = el('span', 'barra-sent');
-    caja.title = 'Escala de -50 a +50; la barra crece desde el cero central';
+    caja.title = 'Escala de -' + escalaSentimiento() + ' a +' + escalaSentimiento() +
+      '; la barra crece desde el cero central';
     var barra = el('i', valor < 0 ? 'barra-sent__barra--neg' : 'barra-sent__barra--pos');
     barra.style.width = Math.max(1, Math.round(Math.abs(valor) / tope * 50)) + '%';
     caja.appendChild(barra);
@@ -431,7 +514,7 @@
       ['Jugadores medidos', String(DATOS.sentimiento.jugadores)],
       ['Mediciones', String(DATOS.sentimiento.mediciones)],
       ['Con ambas fuentes', conDos + ' de ' + DATOS.sentimiento.jugadores],
-      ['Escala', '−50 a +50']
+      ['Escala', '−' + escalaSentimiento() + ' a +' + escalaSentimiento()]
     ].forEach(function (par) {
       cinta.appendChild(itemCinta(par[0], par[1]));
     });
@@ -462,4 +545,6 @@
   cintaSentimiento();
   pintarSentimiento();
   pintarFeatures();
+  pintarMetricas();
+  pintarPesos();
 })();

@@ -212,3 +212,21 @@ def test_web_data_js_esta_actualizado():
     assert payload['modelo']['penalty'] == 'l1'
     assert 'acumulado' in payload['sentimiento']
     assert 'detalle' in payload['sentimiento']
+
+
+def test_la_landing_publica_las_metricas_del_entrenamiento():
+    """Las metricas vienen de models/evaluacion.json, no de numeros a mano."""
+    datos = construir_datos(modelos='models')
+    evaluacion = datos['modelo']['evaluacion']
+    assert evaluacion is not None
+    assert evaluacion['calibracion']['brier_calibrado'] is not None
+    assert evaluacion['calibracion']['ece_calibrado'] is not None
+    assert evaluacion['split']['n_test_jugadores'] > 0
+    assert evaluacion['split']['regla']
+
+
+def test_la_landing_publica_escala_y_pesos_desdel_codigo():
+    datos = construir_datos(modelos='models')
+    sent = datos['sentimiento']
+    assert sent['escala'] == 50
+    assert sent['peso_medios'] + sent['peso_gente'] == 1.0
