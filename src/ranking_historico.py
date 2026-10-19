@@ -116,13 +116,13 @@ def resumen_por_liga(df, top=5):
             .sort_values('apariciones_top5', ascending=False).reset_index(drop=True))
 
 
-def main():
-    df = cargar_rankings()
+def main(directorio=DATA_DIR):
+    df = cargar_rankings(directorio)
     if df.empty:
         print('No hay rankings semanales en data/.')
         return None
     acumulado = agregar_apariciones(df)
-    ruta = os.path.join(DATA_DIR, 'ranking_historico_acumulado.csv')
+    ruta = os.path.join(directorio, 'ranking_historico_acumulado.csv')
     acumulado.to_csv(ruta, index=False, encoding='utf-8-sig')
     print(f'{ruta} ({len(acumulado)} jugadores, {df["semana"].nunique()} semanas)')
     cols = ['posicion_historica', 'nombre', 'liga_principal', 'apariciones_top5',

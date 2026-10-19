@@ -61,6 +61,7 @@ def _registro_de_sentimiento(semana, nombre, club, registro, puesto):
         'prensa_valor': registro.get('prensa_valor'),
         'youtube_n_comentarios': registro.get('youtube_n_comentarios'),
         'prensa_n_textos': registro.get('prensa_n_textos'),
+        'motor': registro.get('motor', ''),
     }
 
 
@@ -134,29 +135,31 @@ def top_por_semana(df, n=3):
     return out
 
 
-def main():
-    df = barrer_semanas()
+def main(directorio=DATA_DIR, calcular=None, verbose=True):
+    df = barrer_semanas(directorio=directorio, calcular=calcular, verbose=verbose)
     if df.empty:
         print('No hay semanas con ranking en data/.')
         return None
-    ruta = os.path.join(DATA_DIR, CSV_SALIDA)
+    ruta = os.path.join(directorio, CSV_SALIDA)
     df.to_csv(ruta, index=False, encoding='utf-8-sig')
     print(f'\n{ruta} ({len(df)} filas jugador-semana)')
 
-    print('\n== Top 3 por sentimiento de cada semana ==')
-    for semana, filas in sorted(top_por_semana(df).items()):
-        if not filas:
-            print(f'{semana}: sin datos')
-            continue
-        texto = ' | '.join(f"{f['nombre']} ({f['club']}) {f['sentimiento']:+.1f}"
-                           for f in filas)
-        print(f'{semana}: {texto}')
+    if verbose:
+        print('\n== Top 3 por sentimiento de cada semana ==')
+        for semana, filas in sorted(top_por_semana(df).items()):
+            if not filas:
+                print(f'{semana}: sin datos')
+                continue
+            texto = ' | '.join(f"{f['nombre']} ({f['club']}) {f['sentimiento']:+.1f}"
+                               for f in filas)
+            print(f'{semana}: {texto}')
 
     acumulado = consolidar(df)
-    ruta_acum = os.path.join(DATA_DIR, 'sentimiento_historico_acumulado.csv')
+    ruta_acum = os.path.join(directorio, 'sentimiento_historico_acumulado.csv')
     acumulado.to_csv(ruta_acum, index=False, encoding='utf-8-sig')
     print(f'\n{ruta_acum}')
-    print(acumulado.head(15).to_string(index=False))
+    if verbose:
+        print(acumulado.head(15).to_string(index=False))
     return acumulado
 
 

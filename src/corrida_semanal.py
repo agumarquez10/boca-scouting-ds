@@ -12,12 +12,16 @@ semana ya esta completa no vuelve a pegarle a FotMob; si tiene el ranking pero l
 falta el tweet, retoma desde ahi. Asi una tarea programada diaria no re-consume
 cuota ni pisa una semana ya publicada.
 
+Con `--semana YYYY-Www` reprocesa una semana ya cerrada (backfill): el bloque
+semanal es siempre [lunes 00:00 UTC, lunes siguiente).
+
 Uso:
     python src/corrida_semanal.py
     python src/corrida_semanal.py --forzar            # ignora el gate y el marcador
     python src/corrida_semanal.py --min-ligas 4       # gate mas exigente
     python src/corrida_semanal.py --sin-sentimiento   # solo ranking, sin cuota de YouTube
     python src/corrida_semanal.py --log-dir logs      # otro destino para el log
+    python src/corrida_semanal.py --semana 2026-W40   # reprocesa una semana pasada
 
 Como FotMob publica el TOTW con dias de atraso, conviene correrlo mas de una vez por
 semana: si el gate no se cumple no pasa nada y el siguiente intento reevalua la misma
@@ -44,8 +48,8 @@ import pandas as pd
 
 from automatizacion import generar_borrador
 from fotmob_api import FotMobApi
-from scouting_pipeline import (generar_ranking_semanal, guardar_resultados,
-                               ultimo_bloque_semanal_completo)
+from scouting_pipeline import (bloque_semana_cerrada, generar_ranking_semanal,
+                               guardar_resultados, ultimo_bloque_semanal_completo)
 
 from rutas import dir_datos, dir_outputs
 
@@ -131,9 +135,8 @@ def guardar_marcador(semana, estado, detalle=None, directorio=None):
     return ruta
 
 
-def _semana_del_bloque():
-    """Clave ISO de la semana cerrada que corresponde al bloque actual."""
-    inicio, _ = ultimo_bloque_semanal_completo()
+def _semana_del_bloque(inicio):
+    """Clave ISO de la semana a la que corresponde un bloque semanal."""
     iso = inicio.isocalendar()
     return f'{iso.year}-W{iso.week:02d}'
 
@@ -145,9 +148,28 @@ def _refrescar_landing(log):
              f'{len(datos["historico"])} jugadores en el historico')
 
 
-def _radar(detalle):
+def _refrescar_historicos(log, directorio=None):
+    """Regenera el ranking y el sentimiento historicos que lee la landing.
+
+    Sin esto la seccion "El pulso de las menciones" queda congelada: la landing
+    lee `sentimiento_historico.csv` y ese archivo solo lo escribe este script.
+    """
+    from ranking_historico import main as ranking_main
+    from sentimiento_historico import main as sentimiento_main
+
+    directorio = directorio or dir_datos()
+    acumulado = ranking_main(directorio=directorio)
+    if acumulado is not None:
+        log.info(f'Ranking historico: {len(acumulado)} jugadores consolidados')
+    consolidado = sentimiento_main(directorio=directorio)
+    if consolidado is not None:
+        log.info(f'Sentimiento historico: {len(consolidado)} jugadores consolidados')
+
+
+def _radar(detalle, inicio=None, fin=None):
     """Consulta FotMob y puntua la semana. No escribe nada en disco: decide el gate."""
-    inicio, fin = ultimo_bloque_semanal_completo()
+    if inicio is None:
+        inicio, fin = ultimo_bloque_semanal_completo()
     fotmob = FotMobApi()
     try:
         ranking, no_resueltos, avisos = generar_ranking_semanal(
@@ -170,14 +192,22 @@ def _leer_ranking_guardado(semana, directorio=None):
 
 
 def corrida(min_ligas=MIN_LIGAS_MIN, forzar=False, con_sentimiento=True,
-            directorio_log=None, directorio_datos=None):
+            directorio_log=None, directorio_datos=None, semana=None,
+            con_historicos=True):
     """Corre la semana completa. Devuelve el codigo de salida."""
     log = _logger(directorio=directorio_log)
     log.info('=' * 60)
     detalle = {}
 
-    marcador = None if forzar else leer_marcador(
-        _semana_del_bloque(), directorio=directorio_datos)
+    if semana:
+        inicio, fin = bloque_semana_cerrada(semana)
+    else:
+        inicio, fin = ultimo_bloque_semanal_completo()
+    semana = _semana_del_bloque(inicio)
+    if not forzar:
+        marcador = leer_marcador(semana, directorio=directorio_datos)
+    else:
+        marcador = None
     if marcador and marcador.get('estado') == ESTADO_COMPLETA:
         log.info(f"Semana {marcador.get('semana')} ya estaba completa "
                  f'({marcador.get("generado")}). No se reprocesa '
@@ -187,7 +217,6 @@ def corrida(min_ligas=MIN_LIGAS_MIN, forzar=False, con_sentimiento=True,
     log.info('Paso 1: radar semanal TOTW (FotMob)')
     retomar = bool(marcador) and marcador.get('estado') == ESTADO_RANKING
     if retomar:
-        semana = marcador['semana']
         ranking = _leer_ranking_guardado(semana, directorio=directorio_datos)
         log.info(f'Se retoma la semana {semana}: el ranking ya estaba escrito, '
                  f'no se vuelve a consultar FotMob.')
@@ -196,10 +225,11 @@ def corrida(min_ligas=MIN_LIGAS_MIN, forzar=False, con_sentimiento=True,
                         'ligas_con_totw': marcador.get('ligas_con_totw', []),
                         'inicio': marcador.get('inicio'), 'fin': marcador.get('fin')})
         no_resueltos = pd.DataFrame()
-        inicio = marcador.get('inicio')
+        gate_previo = bool(marcador.get('gate_forzado', False))
     else:
-        ranking, no_resueltos, inicio = _radar(detalle)
-        semana = detalle.get('semana', '?')
+        gate_previo = False
+        ranking, no_resueltos, inicio = _radar(detalle, inicio, fin)
+        detalle.setdefault('semana', semana)
 
     log.info(f"Semana {semana} ({detalle.get('inicio')} a {detalle.get('fin')})")
     con_totw = detalle.get('ligas_con_totw', [])
@@ -210,6 +240,7 @@ def corrida(min_ligas=MIN_LIGAS_MIN, forzar=False, con_sentimiento=True,
              f'{", ".join(sin_totw) or "ninguna"}')
 
     n_ligas = int(detalle.get('n_ligas_con_totw', 0))
+    gate_forzado = gate_previo
     if not cumple_gate(detalle, min_ligas):
         if retomar:
             log.info('Se retoma una semana ya puntuada: no se vuelve a evaluar el gate.')
@@ -219,6 +250,9 @@ def corrida(min_ligas=MIN_LIGAS_MIN, forzar=False, con_sentimiento=True,
                      f'(--forzar ignora el gate)')
             if not forzar:
                 return EXIT_SIN_SALIDA
+            gate_forzado = True
+            log.warning(f'Gate FORZADO: la semana {semana} se escribe con {n_ligas} '
+                        f'liga(s) de {min_ligas} requeridas. Queda marcada en el marcador.')
 
     if ranking is None or ranking.empty:
         log.info('Sin jugadores puntuables: no se genera borrador de tweet.')
@@ -236,7 +270,7 @@ def corrida(min_ligas=MIN_LIGAS_MIN, forzar=False, con_sentimiento=True,
         guardar_marcador(semana, ESTADO_RANKING, {
             'inicio': str(inicio), 'fin': detalle.get('fin'),
             'ligas_con_totw': con_totw, 'n_ligas_con_totw': n_ligas,
-            'jugadores': len(ranking),
+            'jugadores': len(ranking), 'gate_forzado': gate_forzado,
         }, directorio=directorio_datos)
 
     if not con_sentimiento:
@@ -244,17 +278,29 @@ def corrida(min_ligas=MIN_LIGAS_MIN, forzar=False, con_sentimiento=True,
         return EXIT_PARCIAL
 
     log.info('Paso 3: sentimiento (hinchada + medios) y borrador de tweet')
+    datos = directorio_datos or dir_datos()
     resultado = generar_borrador(ranking, semana=semana,
                                   cache_path=os.path.join(
-                                      directorio_datos or dir_datos(),
-                                      f'sentimiento_radar_{semana}.csv'))
+                                      datos, f'sentimiento_radar_{semana}.csv'),
+                                  tweet_path=os.path.join(datos, f'tweet_{semana}.txt'))
     log.info(f'Sentimiento: {resultado["con_datos"]}/{len(resultado["jugadores"])} '
              f'jugadores con datos')
     log.info(f'Tweet ({len(resultado["texto"])} caracteres):')
     for linea in resultado['texto'].splitlines():
         log.info(f'  {linea}')
 
-    log.info('Paso 4: landing web/data.js')
+    log.info('Paso 4: historicos (ranking acumulado y sentimiento historico)')
+    if con_historicos:
+        try:
+            _refrescar_historicos(log, directorio=directorio_datos)
+        except Exception as exc:
+            log.error(f'No se pudieron refrescar los historicos: '
+                      f'{type(exc).__name__}: {exc}')
+            return EXIT_ERROR
+    else:
+        log.info('Historicos omitidos (--sin-historicos).')
+
+    log.info('Paso 5: landing web/data.js')
     try:
         _refrescar_landing(log)
     except Exception as exc:
@@ -265,6 +311,7 @@ def corrida(min_ligas=MIN_LIGAS_MIN, forzar=False, con_sentimiento=True,
         'inicio': str(inicio), 'fin': detalle.get('fin'),
         'ligas_con_totw': con_totw, 'n_ligas_con_totw': n_ligas,
         'jugadores': len(ranking), 'con_sentimiento': True,
+        'con_historicos': con_historicos, 'gate_forzado': gate_forzado,
         'tweet_caracteres': len(resultado['texto']),
     }, directorio=directorio_datos)
 
@@ -282,6 +329,11 @@ def main():
     parser.add_argument('--sin-sentimiento', action='store_true',
                         help='guarda el ranking y omite el sentimiento y el tweet '
                              '(no consume cuota de YouTube)')
+    parser.add_argument('--sin-historicos', action='store_true',
+                        help='no regenera el ranking ni el sentimiento historicos')
+    parser.add_argument('--semana', default=None,
+                        help='semana ISO a reprocesar (YYYY-Www); por defecto, '
+                             'la ultima semana cerrada')
     parser.add_argument('--log-dir', default=None,
                         help='directorio del log (default outputs/logs)')
     args = parser.parse_args()
@@ -289,7 +341,11 @@ def main():
     try:
         return corrida(min_ligas=args.min_ligas, forzar=args.forzar,
                        con_sentimiento=not args.sin_sentimiento,
-                       directorio_log=args.log_dir)
+                       directorio_log=args.log_dir, semana=args.semana,
+                       con_historicos=not args.sin_historicos)
+    except ValueError as exc:
+        print(f'Error: {exc}')
+        return EXIT_ERROR
     except Exception as exc:
         logging.getLogger('corrida_semanal').exception('Corrida fallida')
         print(f'Error inesperado: {type(exc).__name__}: {exc}')

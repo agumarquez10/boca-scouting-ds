@@ -112,6 +112,27 @@ usuario. Validación live de la semana 21–28/09/2026: Argentina y Perú puntua
 actuales para fechas históricas: sus totales pueden incluir partidos posteriores
 a esa fecha.
 
+### Cobertura del TOTW y el gate
+
+FotMob publica el equipo de la fecha **por ronda**: cada ronda publicada trae
+~11 jugadores de los partidos de esa ronda. Una semana tiene TOTW solo si alguna
+ronda publicada tiene partidos dentro de esa semana. Como la librería de
+`fotmob` tampoco expone el `round` en los fixtures, el filtro real del pipeline
+es el `matchId` del jugador contra los fixtures de la semana.
+
+Consecuencia práctica: el gate de 3 ligas no siempre se puede cumplir hacia
+atrás. Backfill del 19/10/2026: W41 (05–12/10) tuvo 5 ligas y W42 (12–19/10) 4,
+pero W40 (28/09–05/10) solo 2 (Argentina y Paraguay) porque Brasil, Perú y Chile
+no tienen rondas publicadas con partidos en esa semana.
+
+### El token del proxy de la librería `fotmob`
+
+La librería pide un token `x-mas` a un host que no es alcanzable desde la red
+del proyecto y **no cachea el fallo**: cada request volvía a pedirlo y perdía
+~21s de timeout, lo que hacía inviable cualquier corrida larga. `src/fotmob_api.py`
+parchea el cliente para que el fallo se recuerde y no se reintente; FotMob
+responde igual sin ese header. Antes: 21s por llamada. Después: ~0.1–0.4s.
+
 ### Ranking histórico
 `src/ranking_historico.py` consolida los `ranking_jugadores_fecha_*.csv` por
 `player_id_fotmob` y guarda `data/ranking_historico_acumulado.csv`. Reporta
@@ -195,7 +216,8 @@ actualiza la landing sin tocar la página.
 | `data/ranking_historico_acumulado.csv` | Apariciones en el top 5 agregadas por jugador sobre todos los rankings semanales |
 | `data/sentimiento_radar_YYYY-Www.csv` | Sentimiento por jugador del tweet (YouTube + prensa) con caché semanal y columna `motor` |
 | `data/sentimiento_historico.csv` | Sentimiento del corte por puesto en todas las semanas registradas |
-| `data/estado/corrida_YYYY-Www.json` | Marcador de la corrida de la semana: qué se llegó a escribir |
+| `data/estado/corrida_YYYY-Www.json` | Marcador de la corrida de la semana: estado, ligas con TOTW y `gate_forzado` |
+| `data/tweet_YYYY-Www.txt` | Borrador de tweet de cada semana (el `tweet_top5.txt` se pisa en cada corrida) |
 | `models/evaluacion.json` | Métricas del último entrenamiento; las publica la landing |
 | `web/data.js` | Datos de la página del radar, generados por `src/landing_data.py` |
 | `data/scouting_resultado.csv` | Ranking antiguo de mercado; no lo genera el radar semanal |
@@ -210,8 +232,12 @@ Credenciales en `secrets/.env` (no versionado; ver `.env.example`).
 - [x] Esquema de 9 features y validación temporal por jugador de L1/RF
 - [x] MVP offline del radar semanal TOTW → stats por torneo FotMob (todas las competiciones de club) → ranking del modelo
 - [x] Calibración Platt del score (`probabilidad_adn`) validada con Brier/ECE por jugador
+- [x] Métricas del entrenamiento persistidas en `models/evaluacion.json` y publicadas por la landing (sin números a mano en el HTML)
+- [x] Escala de sentimiento coherente con la que se anuncia (±50) y léxico matcheado por token
+- [x] Corrida semanal idempotente (marcador por semana) y con exit code propio para la corrida parcial
 - [x] Validación live de cobertura: Argentina, Perú y Paraguay puntuaron; Brasil/Chile en parón; Uruguay sin TOTW
 - [x] Ranking histórico acumulado de apariciones en el top 5 (`ranking_historico.py`)
+- [x] Backfill de semanas pasadas (`--semana YYYY-Www`) y conexión de los históricos al final de la corrida
 - [ ] Re-activar Ecuador y Uruguay (stand by en `ligas.py`) cuando FotMob publique su TOTW; re-validar Chile cuando haya fechas
 - [x] NLP de sentimiento con fallback a placeholders
 - [x] Automatización semanal conectada al radar TOTW (top 3 por puesto → borrador de tweet)
@@ -220,6 +246,11 @@ Credenciales en `secrets/.env` (no versionado; ver `.env.example`).
 - [ ] Publicar tweet real (faltan credenciales OAuth 1.0a y `requests-oauthlib`;
       hoy se escribe `data/tweet_top5.txt`)
 - [x] Sentimiento por jugador del TOTW (YouTube + prensa multi-medio, prioridad a medios) para el top 3 del tweet
+- [ ] Validar el sentimiento con una muestra de textos etiquetados a mano: los pesos 60/40 son provisionales
+- [ ] Guardar los textos crudos de cada medición: hoy la caché solo guarda el score final, así que
+      cambiar el motor obliga a volver a la red
+- [ ] Migrar `experimentos_modelo.py`, `experimento_arqueros.py` y `experimento_competicion.py` a
+      GroupKFold: hoy usan `StratifiedKFold` sin agrupar y su OOF está inflado ~+0.03
 
 ### Sentimiento (límites)
 VADER está entrenado en inglés: su aporte en español es limitado y el peso real
@@ -248,8 +279,14 @@ python src/corrida_semanal.py                    # corrida normal
 python src/corrida_semanal.py --min-ligas 4       # gate más exigente
 python src/corrida_semanal.py --forzar            # ignora el gate y el marcador
 python src/corrida_semanal.py --sin-sentimiento   # solo ranking, no consume cuota de YouTube
+python src/corrida_semanal.py --sin-historicos    # no regenera los historicos
 python src/corrida_semanal.py --log-dir logs      # otro destino para el log
+python src/corrida_semanal.py --semana 2026-W40   # reprocesa una semana ya cerrada
 ```
+
+Con `--semana YYYY-Www` se reprocesa una semana pasada (backfill). El bloque
+semanal es siempre [lunes 00:00 UTC, lunes siguiente) y la semana tiene que
+estar cerrada: una semana que todavía no terminó se rechaza.
 
 Códigos de salida: `0` corrida completa · `2` no se produjo salida (gate no
 cumplido o sin jugadores puntuables) · `3` corrida parcial (el ranking se
@@ -261,7 +298,13 @@ La corrida es **idempotente**: deja un marcador en
 `completa` no vuelve a pegarle a FotMob (sale con `0` sin hacer nada); si está
 en `ranking` retoma desde el tweet sin volver a consultar la fuente. Así una
 tarea programada diaria no re-consume cuota ni pisa una semana ya publicada.
-`--forzar` ignora el marcador.
+`--forzar` ignora el marcador y el gate. Cuando el gate no se cumple y se fuerza, el marcador queda con `gate_forzado: true`: la semana se escribe pero queda registrado que tuvo menos ligas de las requeridas.
+
+Al final la corrida regenera también los históricos (`ranking_historico.py` y
+`sentimiento_historico.py`) antes de la landing. Sin ese paso la sección "El
+pulso de las menciones" quedaba congelada: la landing lee
+`data/sentimiento_historico.csv` y ese archivo solo lo escribía el barrido
+histórico, que la corrida no invocaba.
 
 ## Automatización semanal (Windows Task Scheduler)
 
@@ -274,7 +317,7 @@ absorber la latencia de publicación de FotMob:
 schtasks /Create /SC WEEKLY /D TUE,THU,SAT /ST 08:00 /TN "BocaScouting" /TR "C:\Users\Agu\Desktop\boca-scouting-ds\venv\Scripts\python.exe C:\Users\Agu\Desktop\boca-scouting-ds\src\corrida_semanal.py"
 ```
 
-El borrador queda en `data/tweet_top5.txt` y la página se regenera; no publica en
+El borrador queda en `data/tweet_top5.txt` (última corrida) y una copia por semana en `data/tweet_YYYY-Www.txt`; la página se regenera; no publica en
 Twitter (esa integración está pendiente).
 
 ## Tests

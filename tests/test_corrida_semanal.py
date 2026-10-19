@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -153,7 +154,7 @@ def test_cache_sentimiento_incremental_no_pierde_trajo(tmp_path):
 
 def _fake_radar(detalle, n_ligas, ranking=None):
     """Sustituye la consulta a FotMob: llena `detalle` y devuelve el ranking."""
-    def radar(detalle_recibido):
+    def radar(detalle_recibido, inicio=None, fin=None):
         detalle_recibido.update({
             'semana': '2026-W40', 'inicio': '2026-09-28', 'fin': '2026-10-05',
             'ligas_con_totw': [f'Liga{i}' for i in range(n_ligas)],
@@ -311,7 +312,8 @@ def test_semana_completa_no_se_reprocesa(monkeypatch, tmp_path):
         return pd.DataFrame(), pd.DataFrame(), INICIO
 
     monkeypatch.setattr(corrida_semanal, '_radar', radar_que_no_deberia_llamarse)
-    monkeypatch.setattr(corrida_semanal, '_semana_del_bloque', lambda: '2026-W42')
+    monkeypatch.setattr(corrida_semanal, '_semana_del_bloque',
+                        lambda inicio=None: '2026-W42')
     corrida_semanal.guardar_marcador(
         '2026-W42', corrida_semanal.ESTADO_COMPLETA,
         {'n_ligas_con_totw': 3}, directorio=str(tmp_path))
@@ -332,7 +334,8 @@ def test_semana_con_ranking_retoma_sin_consultar_fotmob(monkeypatch, tmp_path):
         return pd.DataFrame(), pd.DataFrame(), INICIO
 
     monkeypatch.setattr(corrida_semanal, '_radar', radar_que_no_deberia_llamarse)
-    monkeypatch.setattr(corrida_semanal, '_semana_del_bloque', lambda: '2026-W42')
+    monkeypatch.setattr(corrida_semanal, '_semana_del_bloque',
+                        lambda inicio=None: '2026-W42')
     corrida_semanal.guardar_marcador(
         '2026-W42', corrida_semanal.ESTADO_RANKING,
         {'n_ligas_con_totw': 3, 'inicio': '2026-10-12', 'fin': '2026-10-19'},
@@ -352,12 +355,97 @@ def test_forzar_ignora_el_marcador_de_semana_completa(monkeypatch, tmp_path):
     monkeypatch.setattr(corrida_semanal, 'generar_borrador', lambda *a, **k: {
         'texto': 'x', 'con_datos': 0, 'jugadores': []})
     monkeypatch.setattr(corrida_semanal, '_refrescar_landing', lambda log: None)
-    monkeypatch.setattr(corrida_semanal, '_semana_del_bloque', lambda: '2026-W42')
+    monkeypatch.setattr(corrida_semanal, '_semana_del_bloque',
+                        lambda inicio=None: '2026-W42')
     corrida_semanal.guardar_marcador(
         '2026-W42', corrida_semanal.ESTADO_COMPLETA,
         {'n_ligas_con_totw': 3}, directorio=str(tmp_path))
 
     assert _corrida(tmp_path, min_ligas=3, forzar=True) == EXIT_OK
+
+
+def test_semana_abierta_no_se_procesa(tmp_path):
+    """Una semana que todavia no termino no se puede reprocesar."""
+    with pytest.raises(ValueError, match='todavia no esta cerrada'):
+        corrida_semanal.bloque_semana_cerrada('2099-W01')
+
+
+def test_bloque_semana_iso_es_lunes_a_lunes():
+    from scouting_pipeline import bloque_semana_iso
+
+    inicio, fin = bloque_semana_iso('2026-W40')
+    assert inicio.isoformat() == '2026-09-28T00:00:00+00:00'
+    assert fin.isoformat() == '2026-10-05T00:00:00+00:00'
+
+
+def test_bloque_semana_iso_rechaza_una_semana_invalida():
+    from scouting_pipeline import bloque_semana_iso
+
+    with pytest.raises(ValueError):
+        bloque_semana_iso('2026-W60')
+    with pytest.raises(ValueError):
+        bloque_semana_iso('no-es-una-semana')
+
+
+def test_corrida_con_semana_usa_esa_semana(monkeypatch, tmp_path):
+    """Con --semana se reprocesa ese bloque y no el de la ultima semana."""
+    pedido = {}
+
+    def radar(detalle, inicio=None, fin=None):
+        pedido['inicio'] = inicio
+        pedido['fin'] = fin
+        detalle.update({'semana': '2026-W40', 'n_ligas_con_totw': 3,
+                        'ligas_con_totw': ['A'], 'inicio': '2026-09-28',
+                        'fin': '2026-10-05'})
+        return RANGING, pd.DataFrame(), inicio
+
+    monkeypatch.setattr(corrida_semanal, '_radar', radar)
+    monkeypatch.setattr(corrida_semanal, 'guardar_resultados',
+                        lambda *a, **k: ('ranking.csv', 'no_resueltos.csv'))
+    monkeypatch.setattr(corrida_semanal, 'generar_borrador', lambda *a, **k: {
+        'texto': 'x', 'con_datos': 0, 'jugadores': []})
+    monkeypatch.setattr(corrida_semanal, '_refrescar_landing', lambda log: None)
+    monkeypatch.setattr(corrida_semanal, '_refrescar_historicos', lambda log, directorio=None: None)
+
+    assert _corrida(tmp_path, min_ligas=3, semana='2026-W40') == EXIT_OK
+    assert pedido['inicio'].date().isoformat() == '2026-09-28'
+    assert pedido['fin'].date().isoformat() == '2026-10-05'
+    marcador = corrida_semanal.leer_marcador('2026-W40', directorio=str(tmp_path))
+    assert marcador['semana'] == '2026-W40'
+
+
+def test_la_corrida_refresca_los_historicos(monkeypatch, tmp_path):
+    """Sin这一步 la seccion de menciones de la landing queda vieja."""
+    llamado = {'historicos': 0}
+
+    def historicos(log, directorio=None):
+        llamado['historicos'] += 1
+
+    monkeypatch.setattr(corrida_semanal, '_radar', _fake_radar({}, 3))
+    monkeypatch.setattr(corrida_semanal, 'guardar_resultados',
+                        lambda *a, **k: ('ranking.csv', 'no_resueltos.csv'))
+    monkeypatch.setattr(corrida_semanal, 'generar_borrador', lambda *a, **k: {
+        'texto': 'x', 'con_datos': 0, 'jugadores': []})
+    monkeypatch.setattr(corrida_semanal, '_refrescar_landing', lambda log: None)
+    monkeypatch.setattr(corrida_semanal, '_refrescar_historicos', historicos)
+
+    assert _corrida(tmp_path, min_ligas=3) == EXIT_OK
+    assert llamado['historicos'] == 1
+
+
+def test_sin_historicos_no_los_refresca(monkeypatch, tmp_path):
+    monkeypatch.setattr(corrida_semanal, '_radar', _fake_radar({}, 3))
+    monkeypatch.setattr(corrida_semanal, 'guardar_resultados',
+                        lambda *a, **k: ('ranking.csv', 'no_resueltos.csv'))
+    monkeypatch.setattr(corrida_semanal, 'generar_borrador', lambda *a, **k: {
+        'texto': 'x', 'con_datos': 0, 'jugadores': []})
+    monkeypatch.setattr(corrida_semanal, '_refrescar_landing', lambda log: None)
+
+    def no_deberia(log, directorio=None):
+        raise AssertionError('no hay que refrescar los historicos')
+
+    monkeypatch.setattr(corrida_semanal, '_refrescar_historicos', no_deberia)
+    assert _corrida(tmp_path, min_ligas=3, con_historicos=False) == EXIT_OK
 
 
 def test_buscar_videos_devuelve_vacio_si_falla():
@@ -375,3 +463,86 @@ def test_buscar_videos_devuelve_vacio_si_falla():
             return Search()
 
     assert buscar_videos(YoutubeRoto(), 'Jugador', 'Club') == []
+
+def test_gate_forzado_queda_marcado_en_el_marcador(monkeypatch, tmp_path):
+    monkeypatch.setattr(corrida_semanal, '_radar', _fake_radar({}, 2))
+    monkeypatch.setattr(corrida_semanal, 'guardar_resultados',
+                        lambda *a, **k: ('ranking.csv', 'no_resueltos.csv'))
+    monkeypatch.setattr(corrida_semanal, 'generar_borrador', lambda *a, **k: {
+        'texto': 'x', 'con_datos': 0, 'jugadores': []})
+    monkeypatch.setattr(corrida_semanal, '_refrescar_landing', lambda log: None)
+    monkeypatch.setattr(corrida_semanal, '_refrescar_historicos',
+                        lambda log, directorio=None: None)
+
+    monkeypatch.setattr(corrida_semanal, '_semana_del_bloque', lambda inicio=None: '2026-W40')
+    assert _corrida(tmp_path, min_ligas=3, forzar=True) == EXIT_OK
+    marcador = corrida_semanal.leer_marcador('2026-W40', directorio=str(tmp_path))
+    assert marcador['gate_forzado'] is True
+    assert marcador['estado'] == corrida_semanal.ESTADO_COMPLETA
+
+
+def test_gate_cumplido_no_se_marca_como_forzado(monkeypatch, tmp_path):
+    monkeypatch.setattr(corrida_semanal, '_radar', _fake_radar({}, 3))
+    monkeypatch.setattr(corrida_semanal, 'guardar_resultados',
+                        lambda *a, **k: ('ranking.csv', 'no_resueltos.csv'))
+    monkeypatch.setattr(corrida_semanal, 'generar_borrador', lambda *a, **k: {
+        'texto': 'x', 'con_datos': 0, 'jugadores': []})
+    monkeypatch.setattr(corrida_semanal, '_refrescar_landing', lambda log: None)
+    monkeypatch.setattr(corrida_semanal, '_refrescar_historicos',
+                        lambda log, directorio=None: None)
+
+    monkeypatch.setattr(corrida_semanal, '_semana_del_bloque', lambda inicio=None: '2026-W40')
+    assert _corrida(tmp_path, min_ligas=3) == EXIT_OK
+    marcador = corrida_semanal.leer_marcador('2026-W40', directorio=str(tmp_path))
+    assert marcador['gate_forzado'] is False
+
+
+def test_la_corrida_regenera_los_historicos_en_su_directorio(monkeypatch, tmp_path):
+    """Integracion sin red: la corrida reanuda una semana con ranking guardado,
+    genera el sentimiento desde la cache y debe dejar los historicos que lee la
+    landing en el mismo directorio de datos."""
+    import automatizacion
+
+    RANGING.to_csv(tmp_path / 'ranking_jugadores_fecha_2026-W42.csv',
+                   index=False, encoding='utf-8-sig')
+    pd.DataFrame([{
+        'nombre': 'Jugador 1', 'club': 'Club 1', 'sentimiento': 5.0, 'n_fuentes': 2,
+        'fuentes': 'prensa,youtube', 'youtube_valor': 6.0, 'prensa_valor': 4.0,
+        'youtube_n_comentarios': 10, 'prensa_n_textos': 8, 'motor': 'vader_lexico_2',
+    }]).to_csv(tmp_path / 'sentimiento_radar_2026-W42.csv',
+               index=False, encoding='utf-8-sig')
+    corrida_semanal.guardar_marcador(
+        '2026-W42', corrida_semanal.ESTADO_RANKING,
+        {'n_ligas_con_totw': 3, 'inicio': '2026-10-12', 'fin': '2026-10-19'},
+        directorio=str(tmp_path))
+    monkeypatch.setattr(automatizacion, 'TWEET_TXT', str(tmp_path / 'tweet_top5.txt'))
+    monkeypatch.setattr(corrida_semanal, '_refrescar_landing', lambda log: None)
+
+    assert _corrida(tmp_path, min_ligas=3, semana='2026-W42') == EXIT_OK
+
+    assert (tmp_path / 'ranking_historico_acumulado.csv').exists()
+    historico = pd.read_csv(tmp_path / 'sentimiento_historico.csv', encoding='utf-8-sig')
+    assert set(historico['semana']) == {'2026-W42'}
+    assert historico['motor'].iloc[0] == 'vader_lexico_2'
+    assert (tmp_path / 'sentimiento_historico_acumulado.csv').exists()
+    assert (tmp_path / 'tweet_2026-W42.txt').exists()
+    marcador = corrida_semanal.leer_marcador('2026-W42', directorio=str(tmp_path))
+    assert marcador['estado'] == corrida_semanal.ESTADO_COMPLETA
+    assert marcador['con_historicos'] is True
+
+
+def test_cli_con_semana_abierta_sale_con_error(monkeypatch, tmp_path):
+    monkeypatch.setattr(sys, 'argv', ['corrida_semanal.py', '--semana', '2099-W01',
+                                      '--log-dir', str(tmp_path)])
+    assert corrida_semanal.main() == corrida_semanal.EXIT_ERROR
+
+
+def test_radar_rechaza_semana_abierta_antes_de_tocar_fotmob(monkeypatch):
+    import scouting_pipeline
+
+    def no_deberia(*a, **k):
+        raise AssertionError('no hay que consultar FotMob para una semana abierta')
+
+    monkeypatch.setattr(scouting_pipeline, 'FotMobApi', no_deberia)
+    with pytest.raises(ValueError, match='todavia no esta cerrada'):
+        scouting_pipeline.main(semana='2099-W01')

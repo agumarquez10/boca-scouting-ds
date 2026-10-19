@@ -144,7 +144,7 @@ def _semana_actual():
     return f'{iso.year}-W{iso.week:02d}'
 
 
-def generar_borrador(ranking, semana=None, cache_path=None):
+def generar_borrador(ranking, semana=None, cache_path=None, tweet_path=None):
     """Top 3 por puesto + sentimiento + texto del tweet, sobre un ranking ya calculado.
 
     Separate de `main()` para que quien ya consulto FotMob (por ejemplo el gate
@@ -161,8 +161,10 @@ def generar_borrador(ranking, semana=None, cache_path=None):
     con_datos = sum(1 for r in registros if r.get('sentimiento') is not None)
 
     texto = componer_tweet(seleccion, sentimiento)
-    with open(TWEET_TXT, 'w', encoding='utf-8') as f:
-        f.write(texto + '\n')
+    rutas = [TWEET_TXT] + ([tweet_path] if tweet_path else [])
+    for ruta in rutas:
+        with open(ruta, 'w', encoding='utf-8') as f:
+            f.write(texto + '\n')
     return {
         'texto': texto,
         'registros': registros,

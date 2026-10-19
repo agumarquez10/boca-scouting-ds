@@ -53,6 +53,36 @@ def ultimo_bloque_semanal_completo(referencia=None):
             datetime.combine(lunes_actual, time.min, timezone.utc))
 
 
+def bloque_semana_iso(clave, referencia=None):
+    """Bloque [lunes 00:00 UTC, lunes siguiente) de una clave ISO 'YYYY-Www'.
+
+    Mismo criterio que `ultimo_bloque_semanal_completo`, pero para una semana
+    concreta: sirve para reprocesar (backfill) una semana que ya paso.
+    """
+    try:
+        anio, semana = int(clave[:4]), int(clave[6:])
+    except (TypeError, ValueError):
+        raise ValueError(f'semana invalida: {clave!r} (se espera YYYY-Www)')
+    try:
+        lunes = date.fromisocalendar(anio, semana, 1)
+    except ValueError as exc:
+        raise ValueError(f'semana ISO inexistente: {clave!r} ({exc})')
+    inicio = datetime.combine(lunes, time.min, timezone.utc)
+    return inicio, inicio + timedelta(days=7)
+
+
+def bloque_semana_cerrada(clave, referencia=None):
+    """Como `bloque_semana_iso` pero exige que la semana ya haya terminado."""
+    inicio, fin = bloque_semana_iso(clave, referencia)
+    ahora = referencia or datetime.now(timezone.utc)
+    if ahora.tzinfo is None:
+        ahora = ahora.replace(tzinfo=timezone.utc)
+    if fin > ahora:
+        raise ValueError(
+            f'la semana {clave} todavia no esta cerrada (termina el {fin.date()})')
+    return inicio, fin
+
+
 def _parse_fecha(valor):
     if isinstance(valor, datetime):
         dt = valor
@@ -554,8 +584,10 @@ def guardar_resultados(ranking, no_resueltos, inicio, directorio=DATA_DIR):
     return ranking_path, no_resueltos_path
 
 
-def main(detalle=None):
-    inicio, fin = ultimo_bloque_semanal_completo()
+def main(detalle=None, semana=None):
+    """Radar de la semana. `semana` ('YYYY-Www') reprocesa una semana ya cerrada."""
+    inicio, fin = (bloque_semana_cerrada(semana) if semana
+                   else ultimo_bloque_semanal_completo())
     fotmob = FotMobApi()
     try:
         ranking, no_resueltos, avisos = generar_ranking_semanal(
@@ -576,4 +608,11 @@ def main(detalle=None):
 
 
 if __name__ == '__main__':
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Radar semanal de equipos de la fecha')
+    parser.add_argument('--semana', default=None,
+                        help='semana ISO a reprocesar (YYYY-Www); por defecto, '
+                             'la ultima semana cerrada')
+    args = parser.parse_args()
+    main(semana=args.semana)

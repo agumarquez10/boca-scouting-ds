@@ -11,6 +11,7 @@ import asyncio
 import json
 import os
 import sqlite3
+import time
 
 CACHE_DB = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'boca_juniors.db'
@@ -65,6 +66,52 @@ class FotMobApi:
         self._loop = loop or asyncio.new_event_loop()
         self._client = self._FotMob()
         self._reales = 0
+        self._parchar_token()
+
+    def _parchar_token(self):
+        """Evita que cada request reintente el proxy inalcanzable del token."""
+        self._token_falló = False
+        api = getattr(self._client, '_api', None)
+        if api is None:
+            return
+        if hasattr(api, '_get_x_mas_token'):
+            self._token_original = api._get_x_mas_token
+            api._get_x_mas_token = self._token_con_cache
+        self._parchar_timeout(api)
+
+    def _parchar_timeout(self, api, segundos=25):
+        """Timeout corto para las requests.
+
+        La libreria usa el default de aiohttp (300s): una respuesta que se
+        cuelga deja la corrida parada varios minutos sin avisar. Con este
+        timeout la llamada falla rapido y el jugador queda como no resuelto.
+        """
+        import aiohttp
+
+        async def _ensure_session():
+            if api.session is None or api.session.closed:
+                api.session = aiohttp.ClientSession(
+                    headers=api.headers,
+                    timeout=aiohttp.ClientTimeout(total=segundos, connect=8,
+                                                  sock_read=segundos))
+        api._ensure_session = _ensure_session
+
+    async def _token_con_cache(self):
+        """Token del proxy: si una vez falla, no se reintenta en cada llamada.
+
+        La libreria `fotmob` no cachea el fallo del proxy: cada request vuelve a
+        pedir el token a un host inalcanzable y pierde ~21s de timeout. FotMob
+        responde igual sin ese header, asi que seguimos funcionando sin el.
+        """
+        if self._token_falló:
+            return None
+        try:
+            token = await self._token_original()
+        except Exception:
+            token = None
+        if not token:
+            self._token_falló = True
+        return token
 
     @staticmethod
     def _clave(tipo, *args):
@@ -79,21 +126,30 @@ class FotMobApi:
         'team': 'get_team',
     }
 
-    def _llamar(self, tipo, *args, force_refresh=False):
+    def _llamar(self, tipo, *args, force_refresh=False, reintentos=2):
         if tipo not in self._METODOS:
             raise ValueError(f'tipo desconocido: {tipo}')
         clave = self._clave(tipo, *args)
         valor = None if force_refresh else _get_cache(clave)
         if valor is not None:
             return valor
-        coro = getattr(self._client, self._METODOS[tipo])(*args)
-        try:
-            valor = self._loop.run_until_complete(coro)
-        except RuntimeError:
-            self._loop = asyncio.new_event_loop()
-            self._client = self._FotMob()
+        ultimo_error = None
+        for intento in range(reintentos + 1):
             coro = getattr(self._client, self._METODOS[tipo])(*args)
-            valor = self._loop.run_until_complete(coro)
+            try:
+                valor = self._loop.run_until_complete(coro)
+                ultimo_error = None
+                break
+            except RuntimeError as exc:
+                # El loop quedo en mal estado: se rehace y se reintenta.
+                self.reset_loop()
+                ultimo_error = exc
+            except Exception as exc:
+                ultimo_error = exc
+                if intento < reintentos:
+                    time.sleep(1.5 * (intento + 1))
+        if ultimo_error is not None:
+            raise ultimo_error
         self._reales += 1
         if valor is not None:
             _set_cache(clave, valor)
@@ -114,7 +170,7 @@ class FotMobApi:
     def jugador(self, player_id, force_refresh=False):
         return self._llamar('player', player_id, force_refresh=force_refresh)
 
-    def stats_torneo(self, player_id, season_id, force_refresh=False):
+    def stats_torneo(self, player_id, season_id, force_refresh=False, reintentos=2):
         """Stats de UN jugador en UN torneo (`season_id` tipo '0-0' del perfil).
 
         Se llama directo con requests porque el wrapper async de la libreria
@@ -129,16 +185,25 @@ class FotMobApi:
             if cached is not None:
                 return cached
         url = 'https://www.fotmob.com/api/data/playerStats'
-        r = requests.get(url, params={
-            'playerId': player_id, 'seasonId': season_id,
-            'isFirstSeason': 'false',
-        }, headers={'User-Agent': 'Mozilla/5.0'}, timeout=30)
-        r.raise_for_status()
-        valor = r.json()
-        self._reales += 1
-        if valor is not None:
-            _set_cache(clave, valor)
-        return valor
+        ultimo_error = None
+        for intento in range(reintentos + 1):
+            try:
+                r = requests.get(url, params={
+                    'playerId': player_id, 'seasonId': season_id,
+                    'isFirstSeason': 'false',
+                }, headers={'User-Agent': 'Mozilla/5.0'}, timeout=20)
+                r.raise_for_status()
+                valor = r.json()
+            except Exception as exc:
+                ultimo_error = exc
+                if intento < reintentos:
+                    time.sleep(1.0 * (intento + 1))
+                continue
+            self._reales += 1
+            if valor is not None:
+                _set_cache(clave, valor)
+            return valor
+        raise ultimo_error
 
     def equipo(self, team_id, ccode3=''):
         """Devuelve el perfil de un equipo. `ccode3` opcional (si se conoce)."""
@@ -154,3 +219,4 @@ class FotMobApi:
     def reset_loop(self):
         self._loop = asyncio.new_event_loop()
         self._client = self._FotMob()
+        self._parchar_token()
