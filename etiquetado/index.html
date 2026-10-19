@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Etiquetado de sentimiento · ADN Boca</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 680px; margin: 2rem auto; padding: 0 1rem; color: #1b1b1b; }
+  h1 { font-size: 1.3rem; }
+  .progreso { color: #555; font-size: 0.95rem; }
+  .tarjeta { border: 1px solid #ccc; border-radius: 8px; padding: 1.2rem; margin: 1rem 0; min-height: 7rem; }
+  .meta { color: #666; font-size: 0.9rem; margin-bottom: 0.6rem; }
+  .texto { font-size: 1.15rem; line-height: 1.4; white-space: pre-wrap; }
+  .botones { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  button { padding: 0.6rem 0.9rem; border-radius: 6px; border: 1px solid #888; background: #fff; cursor: pointer; font-size: 0.95rem; }
+  button.neg { border-color: #b03a2e; }
+  button.pos { border-color: #1e8449; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .nav { margin-top: 1rem; display: flex; justify-content: space-between; gap: 0.5rem; }
+  .ayuda { color: #666; font-size: 0.85rem; margin-top: 1.5rem; }
+  .vacio { color: #b03a2e; }
+</style>
+</head>
+<body>
+<h1>Etiquetado de sentimiento</h1>
+<p class="progreso" id="progreso"></p>
+
+<div class="tarjeta">
+  <div class="meta" id="meta"></div>
+  <div class="texto" id="texto"></div>
+</div>
+
+<div class="botones">
+  <button class="neg" id="b-neg" title="tecla -">Negativo (−1)</button>
+  <button id="b-neu" title="tecla 0">Neutral (0)</button>
+  <button class="pos" id="b-pos" title="tecla +">Positivo (+1)</button>
+  <button id="b-skip" title="tecla s">No se entiende / no aplica (s)</button>
+</div>
+
+<div class="nav">
+  <button id="b-prev">← Anterior</button>
+  <button id="b-next">Siguiente →</button>
+</div>
+
+<p>
+  <button id="b-export">Descargar etiquetas.csv</button>
+  <button id="b-borrar">Borrar todo</button>
+</p>
+
+<p class="ayuda">
+  Etiquetá cada texto según lo que expresa sobre el jugador: <b>−1</b> negativo,
+  <b>0</b> neutral o mixto, <b>+1</b> positivo. Si no se entiende o no habla del
+  jugador, usá "no se entiende". Las etiquetas se guardan en este navegador; al
+  terminar descargá el CSV y guardalo como <code>data/etiquetado/etiquetas.csv</code>.
+  La herramienta no muestra el puntaje del motor, a propósito.
+</p>
+
+<script src="../data/etiquetado/muestra.js"></script>
+<script>
+(function () {
+  'use strict';
+  var MUESTRA = window.MUESTRA || [];
+  var CLAVE = 'etiquetado-sentimiento-v1';
+  var etiquetas = {};
+  var actual = 0;
+
+  try { etiquetas = JSON.parse(localStorage.getItem(CLAVE) || '{}'); } catch (e) { etiquetas = {}; }
+
+  function guardar() {
+    try { localStorage.setItem(CLAVE, JSON.stringify(etiquetas)); } catch (e) { /* sin storage */ }
+  }
+
+  function etiquetadas() {
+    return Object.keys(etiquetas).filter(function (k) { return etiquetas[k] !== null; }).length;
+  }
+
+  function pintar() {
+    var progreso = document.getElementById('progreso');
+    var meta = document.getElementById('meta');
+    var texto = document.getElementById('texto');
+    if (!MUESTRA.length) {
+      progreso.textContent = '';
+      meta.textContent = '';
+      texto.innerHTML = '<span class="vacio">No hay muestra. Corré python src/etiquetado_sentimiento.py</span>';
+      return;
+    }
+    var fila = MUESTRA[actual];
+    progreso.textContent = etiquetadas() + ' de ' + MUESTRA.length + ' etiquetadas · texto ' + (actual + 1);
+    meta.textContent = fila.id + ' · ' + fila.nombre + (fila.club ? ' (' + fila.club + ')' : '');
+    texto.textContent = fila.texto;
+    var valor = etiquetas[fila.id];
+    ['b-neg', 'b-neu', 'b-pos', 'b-skip'].forEach(function (id) {
+      document.getElementById(id).style.fontWeight = '400';
+    });
+    var marcado = { '-1': 'b-neg', '0': 'b-neu', '1': 'b-pos', 'null': 'b-skip' }[String(valor)];
+    if (marcado) document.getElementById(marcado).style.fontWeight = '700';
+    document.getElementById('b-prev').disabled = actual === 0;
+    document.getElementById('b-next').disabled = actual === MUESTRA.length - 1;
+  }
+
+  function etiquetar(valor) {
+    if (!MUESTRA.length) return;
+    etiquetas[MUESTRA[actual].id] = valor;
+    guardar();
+    if (actual < MUESTRA.length - 1) actual += 1;
+    pintar();
+  }
+
+  function mover(d) {
+    if (!MUESTRA.length) return;
+    actual = Math.min(MUESTRA.length - 1, Math.max(0, actual + d));
+    pintar();
+  }
+
+  function exportar() {
+    var lineas = ['id,etiqueta'];
+    MUESTRA.forEach(function (fila) {
+      var v = etiquetas[fila.id];
+      if (v === undefined || v === null) return;
+      lineas.push(fila.id + ',' + v);
+    });
+    var blob = new Blob([lineas.join('\n') + '\n'], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'etiquetas.csv';
+    a.click();
+  }
+
+  document.getElementById('b-neg').addEventListener('click', function () { etiquetar(-1); });
+  document.getElementById('b-neu').addEventListener('click', function () { etiquetar(0); });
+  document.getElementById('b-pos').addEventListener('click', function () { etiquetar(1); });
+  document.getElementById('b-skip').addEventListener('click', function () { etiquetar(null); });
+  document.getElementById('b-prev').addEventListener('click', function () { mover(-1); });
+  document.getElementById('b-next').addEventListener('click', function () { mover(1); });
+  document.getElementById('b-export').addEventListener('click', exportar);
+  document.getElementById('b-borrar').addEventListener('click', function () {
+    if (window.confirm('¿Borrar todas las etiquetas guardadas en este navegador?')) {
+      etiquetas = {}; guardar(); actual = 0; pintar();
+    }
+  });
+
+  document.addEventListener('keydown', function (ev) {
+    if (ev.target.tagName === 'BUTTON') return;
+    if (ev.key === '-') etiquetar(-1);
+    else if (ev.key === '0') etiquetar(0);
+    else if (ev.key === '+' || ev.key === '1') etiquetar(1);
+    else if (ev.key === 's' || ev.key === 'S') etiquetar(null);
+    else if (ev.key === 'ArrowLeft') mover(-1);
+    else if (ev.key === 'ArrowRight') mover(1);
+  });
+
+  pintar();
+})();
+</script>
+</body>
+</html>

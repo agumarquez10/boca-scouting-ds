@@ -252,6 +252,28 @@ Credenciales en `secrets/.env` (no versionado; ver `.env.example`).
 - [ ] Migrar `experimentos_modelo.py`, `experimento_arqueros.py` y `experimento_competicion.py` a
       GroupKFold: hoy usan `StratifiedKFold` sin agrupar y su OOF está inflado ~+0.03
 
+### Validación del sentimiento contra etiquetas (Fase 3)
+
+Los pesos 60/40 y el motor son heurísticos hasta que se midan contra etiquetas
+humanas. El flujo es:
+
+1. `python src/etiquetado_sentimiento.py --max-youtube 15 --n 150` reúne los
+   textos crudos (comentarios de YouTube y titulares de prensa) de los jugadores
+   del corte por puesto y arma una muestra estratificada por puntaje (300 textos).
+   Escribe `data/etiquetado/` (no versionado). La muestra es ciega: no trae puntaje.
+2. Abrir `etiquetado/index.html` en el navegador y etiquetar cada texto: −1, 0,
+   +1, o "no se entiende". Las etiquetas quedan en el navegador; al terminar,
+   "Descargar etiquetas.csv" y guardarlo como `data/etiquetado/etiquetas.csv`.
+3. `python src/evaluar_sentimiento.py` compara lexicón, VADER y el motor actual
+   (Spearman, F1 macro, accuracy, por fuente). Sin al menos 30 etiquetas no
+   calcula nada. `--bert` agrega la variante con BERT (descarga el modelo).
+
+Costo de cuota: cada búsqueda de YouTube cuesta 100 unidades. Con `--max-youtube 15`
+son unos 1 500 unidades del día. La prensa (RSS) no tiene cuota.
+
+Límite: la mezcla 60/40 se decide por jugador; esta evaluación es por texto y no
+la puede medir. Solo dice qué fuente y qué motor concuerdan con las etiquetas.
+
 ### Sentimiento (límites)
 VADER está entrenado en inglés: su aporte en español es limitado y el peso real
 lo carga el lexicón fútbolero de `src/nlp_engine.py`, que se matchea por palabra

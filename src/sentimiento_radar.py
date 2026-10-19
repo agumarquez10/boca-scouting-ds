@@ -12,6 +12,7 @@ La cobertura es despareja y los medios en portugues quedan fuera (el motor es
 en espanol). Los jugadores sin ninguna fuente no entran al top (faltante != 0).
 """
 
+import json
 import os
 import sys
 
@@ -63,6 +64,7 @@ def sentimiento_jugador(nombre, club, engine=None):
         'youtube_n_comentarios': yt.get('n_comentarios'),
         'prensa_n_textos': prensa.get('n_textos'),
         'motor': MOTOR,
+        'textos': {'youtube': yt.get('textos', []), 'prensa': prensa.get('textos', [])},
     }
 
 
@@ -71,8 +73,28 @@ def _clave(nombre, club):
 
 
 def _guardar_cache(cache, cache_path):
-    pd.DataFrame(list(cache.values())).to_csv(
+    pd.DataFrame([{k: v for k, v in r.items() if k != 'textos'}
+                  for r in cache.values()]).to_csv(
         cache_path, index=False, encoding='utf-8-sig')
+
+
+def ruta_textos(cache_path):
+    """Archivo con los textos crudos de una cache de sentimiento (sidecar JSON)."""
+    base, _ = os.path.splitext(cache_path)
+    return base.replace('sentimiento_radar_', 'sentimiento_textos_') + '.json'
+
+
+def _guardar_textos(textos_por_clave, cache_path):
+    if not cache_path or not textos_por_clave:
+        return
+    ruta = ruta_textos(cache_path)
+    previo = {}
+    if os.path.exists(ruta):
+        with open(ruta, encoding='utf-8') as f:
+            previo = json.load(f)
+    previo.update(textos_por_clave)
+    with open(ruta, 'w', encoding='utf-8') as f:
+        json.dump(previo, f, ensure_ascii=False, indent=1)
 
 
 def calcular_sentimiento(jugadores, engine=None, cache_path=None, calcular=None):
@@ -98,6 +120,9 @@ def calcular_sentimiento(jugadores, engine=None, cache_path=None, calcular=None)
             registros.append(cache[clave])
             continue
         registro = calcular(nombre, club, engine=engine)
+        textos = registro.pop('textos', None)
+        if textos and cache_path:
+            _guardar_textos({clave: textos}, cache_path)
         cache[clave] = registro
         registros.append(registro)
         if cache_path:

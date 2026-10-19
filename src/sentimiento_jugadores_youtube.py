@@ -70,13 +70,14 @@ def comentarios_de_video(youtube, video_id, max_result=MAX_COMENTARIOS_POR_VIDEO
 def sentimiento_jugador_youtube(nombre, club='', engine=None):
     """Calcula el sentimiento promedio de los comentarios de YouTube de un jugador."""
     if not YOUTUBE_API_KEY:
-        return {'ok': False, 'error': 'Sin API key', 'valor': 0.0, 'n_comentarios': 0}
+        return {'ok': False, 'error': 'Sin API key', 'valor': 0.0, 'n_comentarios': 0,
+                'textos': []}
     engine = engine or SentimientoEngine()
     try:
         youtube = _cliente()
     except Exception as exc:
         return {'ok': False, 'error': f'cliente: {type(exc).__name__}',
-                'valor': 0.0, 'n_comentarios': 0}
+                'valor': 0.0, 'n_comentarios': 0, 'textos': []}
     videos = buscar_videos(youtube, nombre, club)
     textos = []
     for vid in videos:
@@ -85,11 +86,13 @@ def sentimiento_jugador_youtube(nombre, club='', engine=None):
             break
     textos = textos[:MAX_COMENTARIOS_POR_JUGADOR]
     if not textos:
-        return {'ok': False, 'error': 'sin comentarios', 'valor': 0.0, 'n_comentarios': 0}
+        return {'ok': False, 'error': 'sin comentarios', 'valor': 0.0, 'n_comentarios': 0,
+                'textos': []}
     puntajes = engine.puntuar_lote(textos)
     return {
         'ok': True,
         'valor': round(sum(puntajes) / len(puntajes), 1),
         'n_comentarios': len(textos),
         'error': '',
+        'textos': textos,
     }

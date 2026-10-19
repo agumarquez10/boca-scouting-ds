@@ -139,3 +139,30 @@ def test_top_por_sentimiento_limita_n():
 def test_top_por_sentimiento_vacio():
     assert top_por_sentimiento([]) == []
     assert top_por_sentimiento([_registro('A', 'X', None, n=0)]) == []
+
+
+def test_calcular_sentimiento_guarda_textos_crudos_aparte(tmp_path):
+    import json
+    from sentimiento_radar import ruta_textos
+
+    cache = tmp_path / 'sentimiento_radar_2026-W40.csv'
+
+    def fake(nombre, club, engine=None):
+        r = _registro(nombre, club, 3.0)
+        r['textos'] = {'youtube': ['buen partido de ' + nombre], 'prensa': ['titular']}
+        return r
+
+    calcular_sentimiento([('A', 'X')], cache_path=cache, calcular=fake)
+
+    csv = pd.read_csv(cache, encoding='utf-8-sig')
+    assert 'textos' not in csv.columns
+    with open(ruta_textos(str(cache)), encoding='utf-8') as f:
+        crudos = json.load(f)
+    assert crudos['A|X']['youtube'] == ['buen partido de A']
+    assert crudos['A|X']['prensa'] == ['titular']
+
+
+def test_ruta_textos_sigue_el_nombre_de_la_cache():
+    from sentimiento_radar import ruta_textos
+    assert ruta_textos('data/sentimiento_radar_2026-W40.csv').endswith(
+        'sentimiento_textos_2026-W40.json')

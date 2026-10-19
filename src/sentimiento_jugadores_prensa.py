@@ -109,11 +109,12 @@ def sentimiento_jugador_prensa(nombre, club='', engine=None, medios=None):
     engine = engine or SentimientoEngine(usar_bert=False)
     textos = notas_prensa(nombre, club, medios)
     if not textos:
-        return {'ok': False, 'error': 'sin textos', 'valor': 0.0, 'n_textos': 0}
+        return {'ok': False, 'error': 'sin textos', 'valor': 0.0, 'n_textos': 0, 'textos': []}
     puntajes = engine.puntuar_lote(textos)
     return {
         'ok': True,
         'valor': round(sum(puntajes) / len(puntajes), 1),
         'n_textos': len(textos),
         'error': '',
+        'textos': textos,
     }
