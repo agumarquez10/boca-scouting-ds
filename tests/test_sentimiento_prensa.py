@@ -50,14 +50,42 @@ def test_sentimiento_jugador_prensa_promedia(monkeypatch):
     import sentimiento_jugadores_prensa as modulo
 
     monkeypatch.setattr(modulo, 'notas_prensa',
-                        lambda nombre, club='', medios=None: ['crack', 'pecho frio'])
+                        lambda nombre, club='', medios=None: [
+                            'Juan Perez es un crack', 'Juan Perez tuvo una gran semana',
+                            'Juan Perez falló el penal'])
 
     class FakeEngine:
         def puntuar_lote(self, textos):
-            return [10.0, -10.0]
+            return [10.0, -10.0, 0.0]
 
-    r = modulo.sentimiento_jugador_prensa('X', 'Y', engine=FakeEngine())
-    assert r['ok'] and r['n_textos'] == 2 and r['valor'] == 0.0
+    r = modulo.sentimiento_jugador_prensa('Juan Perez', 'Boca Juniors', engine=FakeEngine())
+    assert r['ok'] and r['n_textos'] == 3 and r['valor'] == 0.0
+
+
+def test_sentimiento_jugador_prensa_descarta_fuente_con_pocos_textos(monkeypatch):
+    import sentimiento_jugadores_prensa as modulo
+
+    monkeypatch.setattr(modulo, 'notas_prensa',
+                        lambda nombre, club='', medios=None: [
+                            'Juan Perez es un crack', 'Juan Perez tuvo una gran semana',
+                            'Otro tema sin relacion el'])
+
+    class FakeEngine:
+        def puntuar_lote(self, textos):
+            raise AssertionError('no debe puntuar con menos de 3 textos relevantes')
+
+    r = modulo.sentimiento_jugador_prensa('Juan Perez', 'Boca Juniors', engine=FakeEngine())
+    assert not r['ok'] and r['n_textos'] == 2
+
+
+def test_parsear_rss_limpia_html_escapado_y_no_duplica_el_titular():
+    rss = """<rss><channel><item>
+      <title>Lapadula suena fuerte - Depor</title>
+      <description>&lt;a href="https://news.google.com/x" target="_blank"&gt;Lapadula suena fuerte&lt;/a&gt;&amp;nbsp;&amp;nbsp;&lt;font color="#6f6f6f"&gt;Depor&lt;/font&gt;</description>
+    </item></channel></rss>"""
+    textos = _parsear_rss(rss)
+    assert textos == ['Lapadula suena fuerte']
+    assert not any('href' in t or 'http' in t for t in textos)
 
 
 def test_sentimiento_jugador_prensa_sin_textos(monkeypatch):

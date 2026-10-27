@@ -15,6 +15,7 @@ sys.path.insert(0, SCRIPT_DIR)
 from dotenv import load_dotenv
 
 from nlp_engine import SentimientoEngine
+from relevancia import filtrar_relevantes, suficientes
 from rutas import dir_secrets
 
 load_dotenv(os.path.join(dir_secrets(), '.env'))
@@ -81,13 +82,13 @@ def sentimiento_jugador_youtube(nombre, club='', engine=None):
     videos = buscar_videos(youtube, nombre, club)
     textos = []
     for vid in videos:
-        textos.extend(comentarios_de_video(youtube, vid))
+        textos.extend(filtrar_relevantes(comentarios_de_video(youtube, vid), nombre, club))
         if len(textos) >= MAX_COMENTARIOS_POR_JUGADOR:
             break
     textos = textos[:MAX_COMENTARIOS_POR_JUGADOR]
-    if not textos:
-        return {'ok': False, 'error': 'sin comentarios', 'valor': 0.0, 'n_comentarios': 0,
-                'textos': []}
+    if not suficientes(textos):
+        return {'ok': False, 'error': 'pocos comentarios relevantes', 'valor': 0.0,
+                'n_comentarios': len(textos), 'textos': []}
     puntajes = engine.puntuar_lote(textos)
     return {
         'ok': True,

@@ -8,6 +8,7 @@ Gratis y sin API key. Limitacion: el motor de sentimiento es en espanol, por eso
 no se incluyen medios en portugues (Brasil) para no meter ruido.
 """
 
+import html as _html
 import os
 import re
 import sys
@@ -20,6 +21,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 
 from nlp_engine import SentimientoEngine
+from relevancia import filtrar_relevantes, suficientes
 
 UA = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
 MAX_TITULARES = 25
@@ -65,18 +67,23 @@ def _es_basura(titulo):
     )
 
 
+def _limpiar_html(texto):
+    """Google News manda el HTML escapado (&lt;a href=...>); hay que desescapar antes de quitar etiquetas."""
+    sin_etiquetas = re.sub(r'<[^>]+>', '', _html.unescape(texto))
+    return re.sub(r'\s+', ' ', sin_etiquetas).strip()
+
+
 def _parsear_rss(html, max_titulares=MAX_TITULARES):
     titulos = re.findall(r'<title>(.*?)</title>', html, re.S)
     descs = re.findall(r'<description>(.*?)</description>', html, re.S)
     textos = []
     for t in titulos:
-        t = _filtro_fuente(t)
+        t = _filtro_fuente(_limpiar_html(t))
         if t and not _es_basura(t):
             textos.append(t)
     for d in descs:
-        d = re.sub(r'<[^>]+>', '', d)
-        d = _filtro_fuente(d)
-        if d and d not in textos and not _es_basura(d):
+        d = _filtro_fuente(_limpiar_html(d))
+        if d and not any(d.startswith(t) for t in textos) and not _es_basura(d):
             textos.append(d)
     return textos[:max_titulares]
 
@@ -107,9 +114,10 @@ def notas_prensa(nombre, club='', medios=None):
 
 def sentimiento_jugador_prensa(nombre, club='', engine=None, medios=None):
     engine = engine or SentimientoEngine(usar_bert=False)
-    textos = notas_prensa(nombre, club, medios)
-    if not textos:
-        return {'ok': False, 'error': 'sin textos', 'valor': 0.0, 'n_textos': 0, 'textos': []}
+    textos = filtrar_relevantes(notas_prensa(nombre, club, medios), nombre, club)
+    if not suficientes(textos):
+        return {'ok': False, 'error': 'pocos textos relevantes', 'valor': 0.0,
+                'n_textos': len(textos), 'textos': []}
     puntajes = engine.puntuar_lote(textos)
     return {
         'ok': True,
