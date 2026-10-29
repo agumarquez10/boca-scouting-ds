@@ -26,6 +26,14 @@ def normalizar_texto(valor):
     return ' '.join(re.sub(r'[^a-z0-9]+', ' ', texto.lower()).split())
 
 
+CLUBES_EXCLUIDOS = {normalizar_texto('Boca Juniors')}
+
+
+def _es_club_excluido(club):
+    """El radar busca jugadores para Boca: los que ya son del club no entran."""
+    return normalizar_texto(club) in CLUBES_EXCLUIDOS
+
+
 def _season_base(valor):
     """Normaliza una temporada quitando el sufijo de fase (Apertura, etapa...)."""
     n = normalizar_texto(valor)
@@ -483,6 +491,8 @@ def enriquecer_y_puntuar(filas_totw, api_fotmob, scorer=None):
     resueltos, no_resueltos = [], []
     perfiles = {}
     for fila in filas_totw:
+        if _es_club_excluido(fila.get('club_fotmob')):
+            continue
         player_id = fila.get('id_fotmob')
         if not player_id:
             no_resueltos.append({**fila, 'motivo_no_puntuado': 'id_fotmob_ausente'})
@@ -499,6 +509,8 @@ def enriquecer_y_puntuar(filas_totw, api_fotmob, scorer=None):
                               if profile else (None, error_profile or 'perfil_fotmob_ausente'))
         if stats is None:
             no_resueltos.append({**fila, 'motivo_no_puntuado': error_stats})
+            continue
+        if _es_club_excluido(stats.get('club')):
             continue
         resueltos.append({
             **fila,

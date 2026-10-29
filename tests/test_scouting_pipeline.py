@@ -295,6 +295,14 @@ class FotMobFalso(ApiFalso):
         return self.perfil
 
 
+class FotMobRiver(FotMobFalso):
+    def totw(self, *args, **kwargs):
+        filas = super().totw(*args, **kwargs)
+        for f in filas:
+            f['teamId'] = 22
+        return filas
+
+
 def test_pipeline_puntua_con_stats_por_torneo_sin_red_ni_sqlite():
     liga = {'nombre': 'Argentina', 'fotmob_id': 112}
 
@@ -305,7 +313,7 @@ def test_pipeline_puntua_con_stats_por_torneo_sin_red_ni_sqlite():
         out['probabilidad_adn'] = [0.64] * len(out)
         return out
 
-    fotmob = FotMobFalso()
+    fotmob = FotMobRiver(perfil=perfil_fotmob(primaryTeam={'teamName': 'River Plate'}))
     ranking, unmatched, avisos = generar_ranking_semanal(
         fotmob, SEMANA_INICIO, SEMANA_FIN, ligas=[liga], scorer=scorer)
 
@@ -315,21 +323,44 @@ def test_pipeline_puntua_con_stats_por_torneo_sin_red_ni_sqlite():
     assert ranking.iloc[0]['score_adn_boca'] == 0.81
     assert ranking.iloc[0]['probabilidad_adn'] == 0.64
     assert ranking.iloc[0]['goles'] == 7
-    assert ranking.iloc[0]['club'] == 'Boca Juniors'
+    assert ranking.iloc[0]['club'] == 'River Plate'
     assert fotmob.perfiles_consultados == [1234]
     assert fotmob.llamadas_stats == ['0-0', '0-1']
+
+
+def test_jugadores_de_boca_no_entran_al_radar():
+    liga = {'nombre': 'Argentina', 'fotmob_id': 112}
+    fotmob = FotMobFalso()
+    ranking, unmatched, avisos = generar_ranking_semanal(
+        fotmob, SEMANA_INICIO, SEMANA_FIN, ligas=[liga],
+        scorer=lambda _: AssertionError('no debe puntuar jugadores de Boca'))
+
+    assert ranking.empty
+    assert unmatched.empty
+    assert fotmob.perfiles_consultados == []
+
+
+def fila_river(match_id=910, dia=16, rating=8.7):
+    fila = fila_totw(match_id, dia=dia, rating=rating)
+    fila['club_fotmob'] = 'River Plate'
+    fila['team_id_fotmob'] = '22'
+    return fila
+
+
+def perfil_river():
+    return perfil_fotmob(primaryTeam={'teamName': 'River Plate'})
 
 
 def test_stats_incompletas_quedan_no_resueltas_sin_asignar_cero():
     def scorer(_):
         raise AssertionError('no debe puntuar features incompletas')
 
-    fotmob = FotMobFalso(stats_por_entry={
+    fotmob = FotMobFalso(perfil=perfil_river(), stats_por_entry={
         '0-0': stats_payload(7, None, 10),
         '0-1': stats_payload(0, 0, 2),
     })
     ranking, unmatched = enriquecer_y_puntuar(
-        [fila_totw()], fotmob, scorer=scorer)
+        [fila_river()], fotmob, scorer=scorer)
 
     assert ranking.empty
     assert unmatched.iloc[0]['motivo_no_puntuado'] == 'stats_torneo_incompleto'
@@ -354,8 +385,8 @@ def test_totw_sin_match_con_fixtures_de_la_semana_emite_aviso():
 
 
 def test_deduplica_jugador_repetido_y_consulta_perfil_una_vez():
-    filas = [fila_totw(910, dia=16, rating=8.7),
-             fila_totw(911, dia=19, rating=9.1)]
+    filas = [fila_river(910, dia=16, rating=8.7),
+             fila_river(911, dia=19, rating=9.1)]
 
     def scorer(features):
         assert len(features) == 1
@@ -363,7 +394,7 @@ def test_deduplica_jugador_repetido_y_consulta_perfil_una_vez():
         out['probabilidad'] = [0.9]
         return out
 
-    fotmob = FotMobFalso()
+    fotmob = FotMobFalso(perfil=perfil_river())
     ranking, unmatched = enriquecer_y_puntuar(filas, fotmob, scorer=scorer)
 
     assert unmatched.empty
