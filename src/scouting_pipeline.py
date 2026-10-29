@@ -233,8 +233,26 @@ def _equipo_del_jugador(jugador_totw, fixture):
     return ''
 
 
+def _ronda_en_semana(fechas, inicio, fin):
+    """Una ronda pertenece a la semana donde cae la mayoria de sus partidos (UTC).
+
+    Con empate exacto decide la fecha mediana, asi cada ronda cae en una sola semana.
+    """
+    if not fechas:
+        return False
+    en_semana = sum(1 for f in fechas if inicio <= f < fin)
+    if en_semana * 2 != len(fechas):
+        return en_semana * 2 > len(fechas)
+    mediana = sorted(fechas)[len(fechas) // 2]
+    return inicio <= mediana < fin
+
+
 def recolectar_totw_semana(api_fotmob, liga, inicio, fin):
-    """Obtiene solo los jugadores cuyo partido cayó en la semana solicitada."""
+    """Jugadores del TOTW de las rondas que pertenecen a la semana solicitada.
+
+    La unidad que publica FotMob es la ronda: se trae el 11 ideal completo y no
+    solo los jugadores cuyo partido cayó dentro del corte UTC del lunes.
+    """
     season = api_fotmob.temporada_actual(liga['fotmob_id'], force_refresh=True)
     if not season:
         return [], [f"{liga['nombre']}: FotMob no devolvio temporada actual"]
@@ -249,27 +267,30 @@ def recolectar_totw_semana(api_fotmob, liga, inicio, fin):
 
     rounds_payload = api_fotmob.totw_rounds(
         liga['fotmob_id'], season, force_refresh=True)
-    round_ids = seleccionar_rounds(
-        rounds_payload, {f['round_token'] for f in fixtures_semana if f['round_token']})
+    round_ids = seleccionar_rounds(rounds_payload, set())
     if not round_ids:
         return [], [f"{liga['nombre']} {season}: no hay rounds TOTW completados"]
 
     fixture_por_id = {f['match_id']: f for f in fixtures_todos}
-    fixture_ids_semana = {f['match_id'] for f in fixtures_semana}
     filas = []
     avisos = []
     for indice, round_id in enumerate(round_ids):
         totw = api_fotmob.totw(
             liga['fotmob_id'], season, round_id, force_refresh=indice < 3)
         jugadores = totw.get('players', []) if isinstance(totw, dict) else totw
+        partidos = []
         for jugador in jugadores if isinstance(jugadores, list) else []:
             try:
                 match_id = int(jugador.get('matchId'))
             except (TypeError, ValueError):
                 continue
             fixture = fixture_por_id.get(match_id)
-            if fixture is None or match_id not in fixture_ids_semana:
-                continue
+            if fixture is not None:
+                partidos.append((jugador, match_id, fixture))
+        fechas = [fixture['fecha_partido_utc'] for _, _, fixture in partidos]
+        if not _ronda_en_semana(fechas, inicio_dt, fin_dt):
+            continue
+        for jugador, match_id, fixture in partidos:
             rating = (jugador.get('rating') or {}).get('num')
             try:
                 rating = float(rating) if rating not in (None, '') else None

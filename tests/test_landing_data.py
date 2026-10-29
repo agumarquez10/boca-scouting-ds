@@ -62,6 +62,16 @@ def test_semanas_ordenadas_y_con_rango_iso(semanas_tmp):
     assert semanas[0]['fin'] == '2026-09-27'
 
 
+def test_semana_sin_muestra_lleva_su_justificante(semanas_tmp):
+    (semanas_tmp / 'semanas_sin_muestra.json').write_text(json.dumps({
+        '2026-W39': {'motivo': 'Fecha FIFA', 'ventana': '21/09/2026 al 06/10/2026',
+                     'detalle': 'Ventana internacional.'},
+    }), encoding='utf-8')
+    semanas = {s['clave']: s for s in construir_semanas(semanas_tmp)}
+    assert semanas['2026-W39']['falta_datos']['motivo'] == 'Fecha FIFA'
+    assert semanas['2026-W40']['falta_datos'] is None
+
+
 def test_planilla_ordena_por_score_y_no_por_ranking(semanas_tmp):
     semana = construir_semanas(semanas_tmp)[0]
     assert [j['lugar'] for j in semana['top']] == [1, 2]

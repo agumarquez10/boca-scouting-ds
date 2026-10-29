@@ -75,6 +75,25 @@ def test_barrer_semanas_reusa_la_cache(tmp_path):
     assert len(segunda) == 6
 
 
+def test_barrer_semanas_no_cuenta_faltantes_como_datos(tmp_path, capsys):
+    _ranking().to_csv(tmp_path / 'ranking_jugadores_fecha_2026-W36.csv',
+                      index=False, encoding='utf-8-sig')
+
+    def con_faltante(nombre, club, engine=None):
+        registro = _calcular(nombre, club)
+        if nombre == 'Jugador 1':
+            registro['sentimiento'] = None
+        return registro
+
+    barrer_semanas(tmp_path, calcular=con_faltante, verbose=False)
+
+    def no_deberia_calcular(*args, **kwargs):
+        raise AssertionError('la cache deberia evitar la consulta')
+
+    barrer_semanas(tmp_path, calcular=no_deberia_calcular, verbose=True)
+    assert '2026-W36: 6 jugadores, 5 con datos' in capsys.readouterr().out
+
+
 def test_consolidar_ordena_por_maximo():
     df = pd.DataFrame([
         {'semana': '2026-W34', 'puesto': 'DEL', 'nombre': 'A', 'club': 'C1',

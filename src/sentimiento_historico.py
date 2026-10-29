@@ -82,7 +82,7 @@ def barrer_semanas(directorio=DATA_DIR, calcular=None, verbose=True):
             [(nombre, club) for nombre, club, _ in jugadores],
             cache_path=cache_path, calcular=calcular)
         puestos = {(nombre, club): macro for nombre, club, macro in jugadores}
-        con_datos = sum(1 for r in registros if r.get('sentimiento') is not None)
+        con_datos = sum(1 for r in registros if pd.notna(r.get('sentimiento')))
         if verbose:
             print(f'{semana}: {len(registros)} jugadores, {con_datos} con datos')
         for registro in registros:

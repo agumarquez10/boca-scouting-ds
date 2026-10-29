@@ -76,12 +76,20 @@
     return div;
   }
 
+  function marcaFaltaDatos(semana) {
+    var f = semana.falta_datos;
+    return el('p', 'vacio', 'Falta de muestra: ' + f.motivo + ' (' + f.ventana + '). ' + f.detalle);
+  }
+
   function pintarRadar() {
     var semana = semanas[actual];
     pintarBug(semana);
 
     var caja = document.getElementById('planilla');
     caja.textContent = '';
+    if (semana.falta_datos) {
+      caja.appendChild(marcaFaltaDatos(semana));
+    }
 
     if (!semana.top.length) {
       caja.appendChild(el('p', 'vacio', 'No hay candidatos guardados para esta semana. Puede que FotMob todavía no haya publicado el equipo de la fecha o que no hubiera datos suficientes para puntuarlo.'));
@@ -200,6 +208,9 @@
       ? semana.medidos + ' de ' + semana.seleccionados + ' con medición'
       : 'sin mediciones guardadas'));
     bloque.appendChild(cabecera);
+    if (semana.falta_datos) {
+      bloque.appendChild(marcaFaltaDatos(semana));
+    }
 
     var puestos = el('div', 'semana__puestos');
     semana.puestos.forEach(function (puesto) {

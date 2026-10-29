@@ -33,6 +33,7 @@ from sentimiento_radar import top_por_sentimiento
 WEB_DIR = os.path.join(dir_raiz(), 'web')
 DATA_JS = os.path.join(WEB_DIR, 'data.js')
 TOP_PLANILLA = 5
+ARCHIVO_SIN_MUESTRA = 'semanas_sin_muestra.json'
 
 
 def _num(valor, decimales=4):
@@ -150,9 +151,18 @@ def _top_sentimiento(puestos):
              for r in top_por_sentimiento(registros, 3)]
 
 
+def _leer_sin_muestra(directorio):
+    ruta = os.path.join(directorio, ARCHIVO_SIN_MUESTRA)
+    if not os.path.exists(ruta):
+        return {}
+    with open(ruta, encoding='utf-8') as f:
+        return json.load(f)
+
+
 def construir_semanas(directorio):
     """Una entrada por semana ISO con la planilla del top 5 y el corte por puesto."""
     archivos = sorted(n for n in os.listdir(directorio) if PATRON_RANKING.match(n))
+    sin_muestra = _leer_sin_muestra(directorio)
     semanas = []
     for nombre in archivos:
         anio, iso = (int(g) for g in PATRON_RANKING.match(nombre).groups())
@@ -177,6 +187,7 @@ def construir_semanas(directorio):
             'medidos': sum(1 for p in puestos for j in p['jugadores']
                            if j['sentimiento'] is not None),
             'seleccionados': sum(len(p['jugadores']) for p in puestos),
+            'falta_datos': sin_muestra.get(clave),
         })
     return semanas
 
