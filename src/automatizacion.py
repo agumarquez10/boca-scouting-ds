@@ -144,12 +144,14 @@ def _semana_actual():
     return f'{iso.year}-W{iso.week:02d}'
 
 
-def generar_borrador(ranking, semana=None, cache_path=None, tweet_path=None):
+def generar_borrador(ranking, semana=None, cache_path=None, tweet_path=None,
+                     escribir_principal=True):
     """Top 3 por puesto + sentimiento + texto del tweet, sobre un ranking ya calculado.
 
     Separate de `main()` para que quien ya consulto FotMob (por ejemplo el gate
     semanal) no vuelva a pegarle a la API. `cache_path` permite elegir el archivo
-    de cache; por defecto es el de la semana cerrada actual.
+    de cache; por defecto es el de la semana cerrada actual. `escribir_principal=False`
+    no toca `tweet_top5.txt` (lo usan las semanas revisadas que no son la ultima).
     """
     seleccion = seleccionar_por_puesto(ranking)
     jugadores = _jugadores_del_tweet(seleccion)
@@ -158,10 +160,10 @@ def generar_borrador(ranking, semana=None, cache_path=None, tweet_path=None):
 
     registros = calcular_sentimiento(jugadores, cache_path=cache_path)
     sentimiento = top_por_sentimiento(registros, 3)
-    con_datos = sum(1 for r in registros if r.get('sentimiento') is not None)
+    con_datos = sum(1 for r in registros if pd.notna(r.get('sentimiento')))
 
     texto = componer_tweet(seleccion, sentimiento)
-    rutas = [TWEET_TXT] + ([tweet_path] if tweet_path else [])
+    rutas = ([TWEET_TXT] if escribir_principal else []) + ([tweet_path] if tweet_path else [])
     for ruta in rutas:
         with open(ruta, 'w', encoding='utf-8') as f:
             f.write(texto + '\n')

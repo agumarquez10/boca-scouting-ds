@@ -22,6 +22,7 @@ Uso:
     python src/corrida_semanal.py --sin-sentimiento   # solo ranking, sin cuota de YouTube
     python src/corrida_semanal.py --log-dir logs      # otro destino para el log
     python src/corrida_semanal.py --semana 2026-W40   # reprocesa una semana pasada
+    python src/corrida_semanal.py --diaria            # automatica: revisa 3 semanas, tope YouTube
 
 Como FotMob publica el TOTW con dias de atraso, conviene correrlo mas de una vez por
 semana: si el gate no se cumple no pasa nada y el siguiente intento reevalua la misma
@@ -39,6 +40,7 @@ import json
 import logging
 import os
 import sys
+from datetime import timedelta
 from logging.handlers import RotatingFileHandler
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -54,6 +56,8 @@ from scouting_pipeline import (bloque_semana_cerrada, generar_ranking_semanal,
 from rutas import dir_datos, dir_outputs
 
 MIN_LIGAS_MIN = 3
+CUOTA_YOUTUBE_DIARIA = 1000
+SEMANAS_REVISION = 3
 NOMBRE_LOG = 'corrida_semanal.log'
 MAX_BYTES_LOG = 512 * 1024
 RESPALDOS_LOG = 3
@@ -191,10 +195,53 @@ def _leer_ranking_guardado(semana, directorio=None):
     return None if df.empty else df
 
 
+def _ultima_semana_cerrada():
+    inicio, _ = ultimo_bloque_semanal_completo()
+    return _semana_del_bloque(inicio)
+
+
+def _firma(df):
+    """Jugadores y scores del ranking, para saber si una revision cambio algo."""
+    if df is None or df.empty:
+        return ()
+    ids = df['player_id_fotmob'].astype(str)
+    scores = df['score_adn_boca'].round(6).astype(str)
+    return tuple(sorted(zip(ids, scores)))
+
+
+def _revisar(semana, marcador, inicio, fin, detalle, directorio_datos, log):
+    """Revisa una semana ya completa contra FotMob.
+
+    Devuelve (ranking, no_resueltos, inicio) si hay que reescribirla por ligas
+    tardias o por una correccion del calculo; None si no cambio nada o si una
+    liga dejo de publicar (en ese caso no se reescribe, por las dudas).
+    """
+    ranking, no_resueltos, inicio = _radar(detalle, inicio, fin)
+    detalle.setdefault('semana', semana)
+    antes = set(marcador.get('ligas_con_totw', []))
+    ahora = set(detalle.get('ligas_con_totw', []))
+    nuevas = sorted(ahora - antes)
+    perdidas = sorted(antes - ahora)
+    guardado = _leer_ranking_guardado(semana, directorio=directorio_datos)
+    if not nuevas and _firma(ranking) == _firma(guardado):
+        log.info(f'Revision {semana}: sin cambios.')
+        return None
+    if perdidas:
+        log.warning(f'Revision {semana}: ligas que ya no publican TOTW {perdidas}; '
+                    f'no se reescribe la semana.')
+        return None
+    log.info(f'Revision {semana}: ligas nuevas {nuevas or "ninguna"}; se reescribe el ranking.')
+    return ranking, no_resueltos, inicio
+
+
 def corrida(min_ligas=MIN_LIGAS_MIN, forzar=False, con_sentimiento=True,
             directorio_log=None, directorio_datos=None, semana=None,
-            con_historicos=True):
-    """Corre la semana completa. Devuelve el codigo de salida."""
+            con_historicos=True, revisar=False, cuota_youtube=CUOTA_YOUTUBE_DIARIA):
+    """Corre la semana completa. Devuelve el codigo de salida.
+
+    `revisar=True` consulta de nuevo una semana ya completa: reescribe solo si
+    aparecio una liga nueva o si el ranking cambio.
+    """
     log = _logger(directorio=directorio_log)
     log.info('=' * 60)
     detalle = {}
@@ -208,11 +255,17 @@ def corrida(min_ligas=MIN_LIGAS_MIN, forzar=False, con_sentimiento=True,
         marcador = leer_marcador(semana, directorio=directorio_datos)
     else:
         marcador = None
+    consultado = None
     if marcador and marcador.get('estado') == ESTADO_COMPLETA:
-        log.info(f"Semana {marcador.get('semana')} ya estaba completa "
-                 f'({marcador.get("generado")}). No se reprocesa '
-                 f'(--forzar lo ignora).')
-        return EXIT_OK
+        if not revisar:
+            log.info(f"Semana {marcador.get('semana')} ya estaba completa "
+                     f'({marcador.get("generado")}). No se reprocesa '
+                     f'(--forzar lo ignora).')
+            return EXIT_OK
+        consultado = _revisar(semana, marcador, inicio, fin, detalle, directorio_datos, log)
+        if consultado is None:
+            return EXIT_OK
+        marcador = None
 
     log.info('Paso 1: radar semanal TOTW (FotMob)')
     retomar = bool(marcador) and marcador.get('estado') == ESTADO_RANKING
@@ -228,8 +281,12 @@ def corrida(min_ligas=MIN_LIGAS_MIN, forzar=False, con_sentimiento=True,
         gate_previo = bool(marcador.get('gate_forzado', False))
     else:
         gate_previo = False
-        ranking, no_resueltos, inicio = _radar(detalle, inicio, fin)
-        detalle.setdefault('semana', semana)
+        if consultado is None:
+            ranking, no_resueltos, inicio = _radar(detalle, inicio, fin)
+            detalle.setdefault('semana', semana)
+        else:
+            ranking, no_resueltos, inicio = consultado
+        forzar = forzar or consultado is not None
 
     log.info(f"Semana {semana} ({detalle.get('inicio')} a {detalle.get('fin')})")
     con_totw = detalle.get('ligas_con_totw', [])
@@ -279,10 +336,14 @@ def corrida(min_ligas=MIN_LIGAS_MIN, forzar=False, con_sentimiento=True,
 
     log.info('Paso 3: sentimiento (hinchada + medios) y borrador de tweet')
     datos = directorio_datos or dir_datos()
+    from sentimiento_jugadores_youtube import configurar_cuota, cuota_usada
+    configurar_cuota(datos, cuota_youtube)
     resultado = generar_borrador(ranking, semana=semana,
                                   cache_path=os.path.join(
                                       datos, f'sentimiento_radar_{semana}.csv'),
-                                  tweet_path=os.path.join(datos, f'tweet_{semana}.txt'))
+                                  tweet_path=os.path.join(datos, f'tweet_{semana}.txt'),
+                                  escribir_principal=semana == _ultima_semana_cerrada())
+    log.info(f'Cuota YouTube del dia: {cuota_usada()}/{cuota_youtube} unidades')
     log.info(f'Sentimiento: {resultado["con_datos"]}/{len(resultado["jugadores"])} '
              f'jugadores con datos')
     log.info(f'Tweet ({len(resultado["texto"])} caracteres):')
@@ -319,8 +380,36 @@ def corrida(min_ligas=MIN_LIGAS_MIN, forzar=False, con_sentimiento=True,
     return EXIT_OK
 
 
+def corrida_diaria(cuota_youtube=CUOTA_YOUTUBE_DIARIA, directorio_log=None,
+                   directorio_datos=None, semanas=SEMANAS_REVISION):
+    """Corrida automatica: la ultima semana cerrada y las anteriores, revisadas.
+
+    Revisar las ultimas semanas cierra dos huecos: ligas que FotMob publica con
+    atraso y correcciones del calculo. Devuelve el codigo de la semana mas
+    reciente; si alguna semana fallo con error, devuelve EXIT_ERROR.
+    """
+    inicio, _ = ultimo_bloque_semanal_completo()
+    codigos = []
+    for k in range(semanas):
+        semana = _semana_del_bloque(inicio - timedelta(days=7 * k))
+        codigos.append(corrida(semana=semana, revisar=True, cuota_youtube=cuota_youtube,
+                               directorio_log=directorio_log,
+                               directorio_datos=directorio_datos))
+    if EXIT_ERROR in codigos:
+        return EXIT_ERROR
+    return codigos[0]
+
+
 def main():
     parser = argparse.ArgumentParser(description='Corrida semanal del radar ADN Boca')
+    parser.add_argument('--diaria', action='store_true',
+                        help='corrida automatica: revisa las ultimas semanas cerradas '
+                             f'({SEMANAS_REVISION}) y respeta el tope de cuota de YouTube')
+    parser.add_argument('--revisar', action='store_true',
+                        help='con --semana: consulta una semana ya completa y la reescribe '
+                             'solo si aparecio una liga nueva o cambio el ranking')
+    parser.add_argument('--cuota-youtube', type=int, default=CUOTA_YOUTUBE_DIARIA,
+                        help=f'tope de unidades de YouTube por dia (default {CUOTA_YOUTUBE_DIARIA})')
     parser.add_argument('--min-ligas', type=int, default=MIN_LIGAS_MIN,
                         help=f'ligas con TOTW requeridas (default {MIN_LIGAS_MIN})')
     parser.add_argument('--forzar', action='store_true',
@@ -339,10 +428,14 @@ def main():
     args = parser.parse_args()
 
     try:
+        if args.diaria:
+            return corrida_diaria(cuota_youtube=args.cuota_youtube,
+                                  directorio_log=args.log_dir)
         return corrida(min_ligas=args.min_ligas, forzar=args.forzar,
                        con_sentimiento=not args.sin_sentimiento,
                        directorio_log=args.log_dir, semana=args.semana,
-                       con_historicos=not args.sin_historicos)
+                       con_historicos=not args.sin_historicos,
+                       revisar=args.revisar, cuota_youtube=args.cuota_youtube)
     except ValueError as exc:
         print(f'Error: {exc}')
         return EXIT_ERROR

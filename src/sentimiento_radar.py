@@ -65,6 +65,7 @@ def sentimiento_jugador(nombre, club, engine=None):
         'prensa_n_textos': prensa.get('n_textos'),
         'motor': MOTOR,
         'textos': {'youtube': yt.get('textos', []), 'prensa': prensa.get('textos', [])},
+        'pendiente': yt.get('error') == 'cuota_agotada',
     }
 
 
@@ -121,10 +122,13 @@ def calcular_sentimiento(jugadores, engine=None, cache_path=None, calcular=None)
             continue
         registro = calcular(nombre, club, engine=engine)
         textos = registro.pop('textos', None)
+        pendiente = registro.pop('pendiente', False)
         if textos and cache_path:
             _guardar_textos({clave: textos}, cache_path)
-        cache[clave] = registro
         registros.append(registro)
+        if pendiente:
+            continue
+        cache[clave] = registro
         if cache_path:
             _guardar_cache(cache, cache_path)
 
