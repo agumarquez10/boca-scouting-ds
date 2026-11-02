@@ -238,6 +238,18 @@ def _leer_evaluacion(modelos):
         return None
 
 
+def _leer_linea_base(modelos):
+    """Linea base del modelo (`models/linea_base.json`, la escribe `linea_base.py`)."""
+    ruta = os.path.join(modelos, 'linea_base.json')
+    if not os.path.exists(ruta):
+        return None
+    try:
+        with open(ruta, encoding='utf-8') as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
 def construir_modelo():
     """Metadatos leidos de los artefactos, sin recalcular el modelo."""
     modelos = dir_models()
@@ -255,6 +267,7 @@ def construir_modelo():
         'calibracion': 'Platt (sigmoid) sobre el OOF agrupado por jugador',
         'orden_ranking': 'score crudo del modelo; el calibrador es monotonico y no reordena',
         'evaluacion': _leer_evaluacion(modelos),
+        'linea_base': _leer_linea_base(modelos),
     }
 
 

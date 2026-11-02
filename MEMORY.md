@@ -11,7 +11,8 @@
 - Serie W34–W43 con regla por ronda (la unidad es la ronda, se asigna a la semana de la mayoría de sus partidos UTC). W39/W40 marcadas como falta de muestra por fecha FIFA (`data/semanas_sin_muestra.json`). W43 sin Chile (FotMob aún no publicó la ronda 25). W44 (cerró 2/11): solo Brasil y Paraguay publicaron → gate no cumplido, reintenta.
 - Jugadores de Boca excluidos del radar (`_es_club_excluido`).
 - Sentimiento: relevancia (`src/relevancia.py`: mención del jugador, español, mínimo 3 textos por fuente). Motor `vader_lexico_2`, escala ±50. Sin BERT.
-- Landing `web/` estática: `src/landing_data.py` → `web/data.js`. El tweet no se publica (falta OAuth 1.0a). Tests: **187 pasan** (2026-11-02). Los tests tienen clave de YouTube vacía (fixture en `tests/conftest.py`).
+- Landing `web/` estática: `src/landing_data.py` → `web/data.js`. El tweet no se publica (falta OAuth 1.0a). Tests: **193 pasan** (2026-11-02).
+- Línea base (`src/linea_base.py` → `models/linea_base.json`, sin reentrenar producción): en CV repetido (20 × 5 folds, GroupKFold estratificado) la logística goles+asistencias supera al L1 de 9 features en AUPRC en 0 de 20 repeticiones (diferencia −0.011, IC95 [−0.021, −0.004]). En prueba, la diferencia es indistinguible de cero (IC95 incluye 0). Landing muestra ambas. Los tests tienen clave de YouTube vacía (fixture en `tests/conftest.py`).
 
 ## 2. Decisiones tomadas y por qué
 - Corrida diaria y no semanal: idempotente, así que reintentar es barato; FotMob publica con atraso.
@@ -41,7 +42,9 @@
 - Etiquetas: `data/etiquetado/rubrica.md`; evaluación con `src/evaluar_sentimiento.py` (≥30 etiquetas).
 
 ## 5. Próximos pasos
-1. Verificar la primera corrida programada (2/11 18:00) en `outputs/logs/corrida_semanal.log`.
+1. Verificar la primera corrida programada (2/11 18:00) en `outputs/logs/corrida_semanal.log`. Commit manual de `web/` (Vercel publica desde GitHub).
+1b. Decisión pendiente: el modelo no supera a goles+asistencias en CV. Opciones: más datos, simplificar, o justificar con otro criterio.
+1c. Conflicto: AGENTS.md pide "sin warnings" y `penalty='l1'` está deprecado en sklearn 1.8 (warning en train_model y linea_base). Decidir si migrar a `l1_ratio=1`.
 2. Re-medir sentimiento por tandas diarias (decidir `MIN_TEXTOS` antes).
 3. Agregar ligas (Chile cuando publique W43; Ecuador/Uruguay en stand by) con consulta de solo lectura antes de activar.
 4. Tweet real (OAuth 1.0a) y publicación de la landing (no hay hosting definido).

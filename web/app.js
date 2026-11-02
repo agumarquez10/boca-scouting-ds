@@ -433,6 +433,19 @@
     if (test.auprc_filas !== undefined) {
       caja.appendChild(itemMetrica('AUPRC (prueba, filas)', null, dec3.format(test.auprc_filas)));
     }
+    var lb = (DATOS.modelo || {}).linea_base;
+    if (lb && lb.cv) {
+      var dif = lb.cv.diferencia_auprc_modelo_menos_base;
+      var base = lb.cv.goles_asistencias_logistica;
+      caja.appendChild(itemMetrica('AUPRC validación cruzada: modelo', null, dec3.format(lb.cv.modelo.auprc_media)));
+      caja.appendChild(itemMetrica('AUPRC validación cruzada: línea base goles + asistencias', null, dec3.format(base.auprc_media)));
+      var ddDif = el('div');
+      ddDif.appendChild(el('dt', null, 'Modelo menos línea base (AUPRC, CV)'));
+      ddDif.appendChild(el('dd', null, dec3.format(dif.media) + ' (IC95 ' +
+        dec3.format(dif.ic95[0]) + ' a ' + dec3.format(dif.ic95[1]) + '); el modelo es mejor en ' +
+        Math.round(dif.p_positiva * lb.cv.repeticiones) + ' de ' + lb.cv.repeticiones + ' repeticiones'));
+      caja.appendChild(ddDif);
+    }
     if (split.n_test_jugadores !== undefined) {
       var dd = el('div');
       dd.appendChild(el('dt', null, 'Prueba'));
